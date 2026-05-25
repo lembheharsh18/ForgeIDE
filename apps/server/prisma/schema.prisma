@@ -1,0 +1,111 @@
+// ──────────────────────────────────────────────
+// FORGE IDE — Prisma Schema
+// ──────────────────────────────────────────────
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ────────────────────────────────────────
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum Platform {
+  CODEFORCES
+  ATCODER
+  LEETCODE
+  CUSTOM
+}
+
+// ── User ─────────────────────────────────────────
+
+model User {
+  id                String            @id @default(cuid())
+  username          String            @unique
+  email             String            @unique
+  passwordHash      String?
+  role              Role              @default(MEMBER)
+  codeforcesHandle  String?
+  avatarUrl         String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  submissions       Submission[]
+  solvedProblems    Problem[]         @relation("SolvedBy")
+  leaderboard       LeaderboardEntry?
+  contestParticipations Contest[]     @relation("Participants")
+}
+
+// ── Problem ──────────────────────────────────────
+
+model Problem {
+  id          String       @id @default(cuid())
+  title       String
+  platform    Platform
+  difficulty  String
+  tags        String[]
+  link        String?
+  statement   String?      @db.Text
+  inputSpec   String?      @db.Text
+  outputSpec  String?      @db.Text
+  noteSection String?      @db.Text
+  timeLimit   Int?
+  memoryLimit Int?
+  cfContestId String?
+  cfIndex     String?
+  testCases   Json?
+  addedById   String
+  createdAt   DateTime     @default(now())
+  solvedBy    User[]       @relation("SolvedBy")
+  submissions Submission[]
+}
+
+// ── Submission ───────────────────────────────────
+
+model Submission {
+  id         String   @id @default(cuid())
+  userId     String
+  problemId  String
+  language   String
+  code       String   @db.Text
+  verdict    String   @default("PENDING")
+  timeMs     Int?
+  memoryKb   Int?
+  errorMsg   String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem    Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+}
+
+// ── Contest ──────────────────────────────────────
+
+model Contest {
+  id           String    @id @default(cuid())
+  name         String
+  platform     Platform
+  startTime    DateTime
+  endTime      DateTime
+  link         String
+  description  String?
+  participants User[]    @relation("Participants")
+  createdAt    DateTime  @default(now())
+}
+
+// ── Leaderboard ──────────────────────────────────
+
+model LeaderboardEntry {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  score       Int      @default(0)
+  solvedCount Int      @default(0)
+  rank        Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

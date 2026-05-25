@@ -1,0 +1,531 @@
+'use client';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback } from 'react';
+
+import type { Verdict } from '../../store/editorStore';
+import { useEditorStore } from '../../store/editorStore';
+
+// ── Verdict Badge ────────────────────────────────
+
+function VerdictBadge({ verdict }: { verdict: Verdict }) {
+  if (!verdict) return null;
+
+  const colors: Record<string, { text: string; border: string }> = {
+    ACCEPTED: { text: 'var(--green)', border: 'var(--green)' },
+    WRONG_ANSWER: { text: 'var(--red)', border: 'var(--red)' },
+    TIME_LIMIT_EXCEEDED: { text: 'var(--orange)', border: 'var(--orange)' },
+    COMPILATION_ERROR: { text: 'var(--red)', border: 'var(--red)' },
+    RUNTIME_ERROR: { text: 'var(--red)', border: 'var(--red)' },
+    PENDING: { text: 'var(--text-muted)', border: 'var(--border-default)' },
+  };
+
+  const c = colors[verdict] || colors.PENDING;
+  const labels: Record<string, string> = {
+    ACCEPTED: 'AC',
+    WRONG_ANSWER: 'WA',
+    TIME_LIMIT_EXCEEDED: 'TLE',
+    COMPILATION_ERROR: 'CE',
+    RUNTIME_ERROR: 'RE',
+    PENDING: '...',
+  };
+
+  return (
+    <span
+      className="text-[9px] px-1.5 py-0.5 rounded"
+      style={{
+        fontFamily: "'Space Mono', monospace",
+        color: c.text,
+        border: `1px solid ${c.border}`,
+      }}
+    >
+      {verdict === 'PENDING' ? (
+        <motion.span
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          ●●●
+        </motion.span>
+      ) : (
+        labels[verdict] || verdict
+      )}
+    </span>
+  );
+}
+
+// ── IO Panel ─────────────────────────────────────
+
+export function IOPanel() {
+  const {
+    activeTab,
+    setActiveTab,
+    stdin,
+    setStdin,
+    stdout,
+    stderr,
+    verdict,
+    isRunning,
+    isRunningTests,
+    testResults,
+    currentProblem,
+    setRunning,
+    setRunningTests,
+  } = useEditorStore();
+
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(stdout);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // fallback
+    }
+  }, [stdout]);
+
+  const handleRunAllTests = () => {
+    setRunningTests(true);
+    // Actual execution will be implemented in Prompt 4
+  };
+
+  const testCases = currentProblem?.testCases || [];
+
+  return (
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      style={{
+        backgroundColor: 'var(--bg-surface)',
+        borderTop: '1px solid var(--border-subtle)',
+      }}
+    >
+      {/* Tab Bar */}
+      <div
+        className="flex items-center gap-0 shrink-0"
+        style={{
+          height: '32px',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        {(['custom', 'testcases'] as const).map((tab) => {
+          const isActive = activeTab === tab;
+          const label = tab === 'custom' ? 'CUSTOM INPUT' : 'TEST CASES';
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="px-4 h-full text-[10px] tracking-wider transition-all duration-150"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                fontWeight: isActive ? 700 : 400,
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.color = 'var(--text-muted)';
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'custom' ? (
+          /* ── Custom Input Tab ────────────── */
+          <div className="flex h-full">
+            {/* STDIN */}
+            <div
+              className="flex-1 flex flex-col"
+              style={{
+                borderRight: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div
+                className="px-3 py-1.5 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              >
+                <span
+                  className="text-[9px] tracking-[2px] uppercase"
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  STDIN
+                </span>
+              </div>
+              <textarea
+                value={stdin}
+                onChange={(e) => setStdin(e.target.value)}
+                className="flex-1 w-full resize-none outline-none p-3"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: '12px',
+                  lineHeight: '1.6',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  border: 'none',
+                }}
+                placeholder="Enter input..."
+                spellCheck={false}
+              />
+            </div>
+
+            {/* STDOUT */}
+            <div
+              className="flex-1 flex flex-col"
+              style={{
+                borderRight: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-3 py-1.5 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[9px] tracking-[2px] uppercase"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    STDOUT
+                  </span>
+                  {verdict && <VerdictBadge verdict={verdict} />}
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="text-[9px] px-1.5 py-0.5 rounded transition-all duration-150"
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    color: copied ? 'var(--green)' : 'var(--text-muted)',
+                    border: `1px solid ${copied ? 'var(--green)' : 'var(--border-default)'}`,
+                  }}
+                >
+                  {copied ? '✓ COPIED' : 'COPY'}
+                </button>
+              </div>
+              <div
+                className="flex-1 overflow-auto p-3"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  fontSize: '12px',
+                  lineHeight: '1.6',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {isRunning ? (
+                  <motion.span
+                    style={{ color: 'var(--text-muted)' }}
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                  >
+                    Running...
+                  </motion.span>
+                ) : stderr ? (
+                  <span style={{ color: 'var(--red)' }}>{stderr}</span>
+                ) : (
+                  stdout || (
+                    <span style={{ color: 'var(--text-muted)' }}>Output will appear here...</span>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* METRICS */}
+            <div
+              className="flex flex-col shrink-0"
+              style={{
+                width: '160px',
+                backgroundColor: 'var(--bg-surface)',
+              }}
+            >
+              <div
+                className="px-3 py-1.5 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              >
+                <span
+                  className="text-[9px] tracking-[2px] uppercase"
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  METRICS
+                </span>
+              </div>
+              <div className="flex-1 flex flex-col justify-center px-4 gap-4">
+                {/* Time */}
+                <div>
+                  <span
+                    className="text-[9px] tracking-wider block mb-1"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    TIME
+                  </span>
+                  <span
+                    className="text-lg font-bold"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {isRunning ? '—' : '0'}
+                    <span
+                      className="text-xs font-normal ml-0.5"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      ms
+                    </span>
+                  </span>
+                </div>
+                {/* Memory */}
+                <div>
+                  <span
+                    className="text-[9px] tracking-wider block mb-1"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    MEMORY
+                  </span>
+                  <span
+                    className="text-lg font-bold"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {isRunning ? '—' : '0'}
+                    <span
+                      className="text-xs font-normal ml-0.5"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      MB
+                    </span>
+                  </span>
+                </div>
+
+                {/* Submit on CF */}
+                {currentProblem?.platform === 'CODEFORCES' && (
+                  <button
+                    className="mt-2 py-1.5 rounded text-[10px] font-bold tracking-wider transition-all duration-200"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--blue)',
+                      border: '1px solid var(--blue)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(90, 158, 255, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    SUBMIT ON CF
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ── Test Cases Tab ──────────────── */
+          <div className="h-full flex flex-col overflow-hidden">
+            {/* Run All button */}
+            <div className="px-3 py-2 shrink-0">
+              <button
+                onClick={handleRunAllTests}
+                disabled={isRunningTests || testCases.length === 0}
+                className="w-full py-1.5 rounded text-[11px] font-bold tracking-wider transition-all duration-200 disabled:opacity-50"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  backgroundColor: 'var(--accent)',
+                  color: '#0a0a0a',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                {isRunningTests ? '⟳ RUNNING TESTS...' : '▶ RUN ALL TESTS'}
+              </button>
+              {isRunningTests && testResults && (
+                <p
+                  className="text-[10px] text-center mt-1"
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  Running test {testResults.filter((r) => r.verdict !== null).length}/
+                  {testCases.length}...
+                </p>
+              )}
+            </div>
+
+            {/* Test case cards */}
+            <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
+              {testCases.length === 0 ? (
+                <div
+                  className="text-center py-6 text-[11px]"
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  No test cases available
+                </div>
+              ) : (
+                testCases.map((tc, i) => {
+                  const result = testResults?.[i];
+                  const borderColor =
+                    result?.verdict === 'ACCEPTED'
+                      ? 'var(--green)'
+                      : result?.verdict === 'WRONG_ANSWER'
+                        ? 'var(--red)'
+                        : 'var(--border-subtle)';
+
+                  return (
+                    <div
+                      key={i}
+                      className="rounded overflow-hidden"
+                      style={{
+                        borderLeft: `2px solid ${borderColor}`,
+                        border: `1px solid var(--border-subtle)`,
+                        borderLeftWidth: '2px',
+                        borderLeftColor: borderColor,
+                        backgroundColor: 'var(--bg-elevated)',
+                      }}
+                    >
+                      {/* Header */}
+                      <div
+                        className="flex items-center justify-between px-3 py-1.5"
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                        }}
+                      >
+                        <span
+                          className="text-[10px] font-bold"
+                          style={{
+                            fontFamily: "'Space Mono', monospace",
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          TEST #{i + 1}
+                        </span>
+                        {result?.verdict && <VerdictBadge verdict={result.verdict} />}
+                      </div>
+
+                      {/* Input / Expected */}
+                      <div className="flex">
+                        <div
+                          className="flex-1 p-2"
+                          style={{
+                            borderRight: '1px solid var(--border-subtle)',
+                          }}
+                        >
+                          <div
+                            className="text-[9px] tracking-wider mb-1"
+                            style={{
+                              fontFamily: "'Space Mono', monospace",
+                              color: 'var(--text-muted)',
+                            }}
+                          >
+                            INPUT
+                          </div>
+                          <pre
+                            className="text-[11px] whitespace-pre-wrap"
+                            style={{
+                              fontFamily: "'Space Mono', monospace",
+                              color: 'var(--text-primary)',
+                            }}
+                          >
+                            {tc.input}
+                          </pre>
+                        </div>
+                        <div className="flex-1 p-2">
+                          <div
+                            className="text-[9px] tracking-wider mb-1"
+                            style={{
+                              fontFamily: "'Space Mono', monospace",
+                              color: 'var(--text-muted)',
+                            }}
+                          >
+                            EXPECTED
+                          </div>
+                          <pre
+                            className="text-[11px] whitespace-pre-wrap"
+                            style={{
+                              fontFamily: "'Space Mono', monospace",
+                              color: 'var(--text-primary)',
+                            }}
+                          >
+                            {tc.output}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {/* Your output (after run) */}
+                      {result?.actual && (
+                        <div
+                          className="p-2"
+                          style={{
+                            borderTop: '1px solid var(--border-subtle)',
+                            backgroundColor:
+                              result.verdict === 'WRONG_ANSWER'
+                                ? 'rgba(255, 69, 69, 0.05)'
+                                : result.verdict === 'ACCEPTED'
+                                  ? 'rgba(57, 255, 138, 0.05)'
+                                  : 'transparent',
+                          }}
+                        >
+                          <div
+                            className="text-[9px] tracking-wider mb-1"
+                            style={{
+                              fontFamily: "'Space Mono', monospace",
+                              color:
+                                result.verdict === 'WRONG_ANSWER' ? 'var(--red)' : 'var(--green)',
+                            }}
+                          >
+                            YOUR OUTPUT
+                          </div>
+                          <pre
+                            className="text-[11px] whitespace-pre-wrap"
+                            style={{
+                              fontFamily: "'Space Mono', monospace",
+                              color:
+                                result.verdict === 'WRONG_ANSWER'
+                                  ? 'var(--red)'
+                                  : 'var(--text-primary)',
+                            }}
+                          >
+                            {result.actual}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

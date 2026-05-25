@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL 16 ─────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: forge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: forge
+      POSTGRES_PASSWORD: forge_secret
+      POSTGRES_DB: forge_ide
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forge -d forge_ide"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Redis 7 ───────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: forge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Backend (Express + TypeScript) ────────────
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: forge-server
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://forge:forge_secret@postgres:5432/forge_ide
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+    volumes:
+      - ./apps/server/src:/app/apps/server/src
+      - ./packages/shared:/app/packages/shared
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Frontend (Next.js 14) ─────────────────────
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    container_name: forge-client
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_URL: http://server:4000
+      NEXT_PUBLIC_WS_URL: ws://server:4000
+    volumes:
+      - ./apps/client/src:/app/apps/client/src
+      - ./packages/shared:/app/packages/shared
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
+  redis_data:
