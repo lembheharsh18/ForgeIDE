@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
 import { z } from 'zod';
@@ -69,7 +70,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     const passwordHash = await hashPassword(password);
 
     // Create user + leaderboard entry in transaction
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newUser = await tx.user.create({
         data: {
           username,

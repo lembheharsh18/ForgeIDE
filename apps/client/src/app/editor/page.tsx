@@ -1,5 +1,6 @@
 'use client';
 
+import { AnimatePresence } from 'framer-motion';
 import { useCallback } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
@@ -8,9 +9,12 @@ import { CodeEditor } from '../../components/editor/CodeEditor';
 import { IOPanel } from '../../components/editor/IOPanel';
 import { ProblemPanel } from '../../components/editor/ProblemPanel';
 import { ProblemSidebar } from '../../components/editor/ProblemSidebar';
+import { RCInteractor } from '../../components/editor/RCInteractor';
 import { StatusBar } from '../../components/layout/StatusBar';
 import { Topbar } from '../../components/layout/Topbar';
 import { LANGUAGES } from '../../config/languages';
+import { useCFProblem } from '../../hooks/useCFProblem';
+import { useCodeExecution } from '../../hooks/useCodeExecution';
 import { useEditorStore } from '../../store/editorStore';
 
 // ── Resize Handle ────────────────────────────────
@@ -54,19 +58,20 @@ function ResizeHandle({ direction = 'horizontal' }: { direction?: 'horizontal' |
 // ── Editor Page ──────────────────────────────────
 
 export default function EditorPage() {
-  const { language, theme, code, setCode, setRunning } = useEditorStore();
+  const { language, theme, code, stdin, setCode, currentProblem, rcMode } = useEditorStore();
+  const { execute } = useCodeExecution();
+
+  // Auto-load CF problem from URL params (?cf=1&problem=A)
+  useCFProblem();
 
   const handleRun = useCallback(() => {
-    setRunning(true);
-    // Actual Piston execution will be implemented in Prompt 4
-    // For now, simulate a short delay
-    setTimeout(() => {
-      const { setOutput, setVerdict, setRunning: sr } = useEditorStore.getState();
-      sr(false);
-      setOutput('// Run connected in Prompt 4', '');
-      setVerdict('PENDING');
-    }, 500);
-  }, [setRunning]);
+    execute({
+      code,
+      language,
+      stdin,
+      problemId: currentProblem?.id,
+    });
+  }, [execute, code, language, stdin, currentProblem?.id]);
 
   const handleLayoutChange = useCallback((sizes: number[]) => {
     try {
@@ -104,7 +109,7 @@ export default function EditorPage() {
       <Topbar />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <PanelGroup
           direction="horizontal"
           onLayout={handleLayoutChange}
@@ -156,6 +161,9 @@ export default function EditorPage() {
             <ClubPanel />
           </Panel>
         </PanelGroup>
+
+        {/* RC Interactor Overlay */}
+        <AnimatePresence>{rcMode && <RCInteractor />}</AnimatePresence>
       </div>
 
       {/* Status Bar */}

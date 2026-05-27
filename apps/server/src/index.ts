@@ -7,23 +7,25 @@ import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { Server as SocketServer } from 'socket.io';
 
 import { generalLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
+import cfRoutes from './routes/cf';
+import contestsRoutes from './routes/contests';
+import executeRoutes from './routes/execute';
+import leaderboardRoutes from './routes/leaderboard';
+import problemsRoutes from './routes/problems';
+import submissionsRoutes from './routes/submissions';
+import usersRoutes from './routes/users';
+import { initSocketServer } from './sockets';
 
 dotenv.config({ path: '../../.env' });
 
 const app = express();
 const httpServer = createServer(app);
 
-const io = new SocketServer(httpServer, {
-  cors: {
-    origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-});
+// ── Socket.IO ────────────────────────────────────
+const io = initSocketServer(httpServer);
 
 // ── Middleware ────────────────────────────────────
 app.use(helmet());
@@ -50,15 +52,13 @@ app.get('/api/health', (_req, res) => {
 
 // ── Routes ───────────────────────────────────────
 app.use('/api/auth', authRoutes);
-
-// ── Socket.IO ────────────────────────────────────
-io.on('connection', (socket) => {
-  console.warn(`[Socket] Client connected: ${socket.id}`);
-
-  socket.on('disconnect', () => {
-    console.warn(`[Socket] Client disconnected: ${socket.id}`);
-  });
-});
+app.use('/api/cf', cfRoutes);
+app.use('/api/execute', executeRoutes);
+app.use('/api/problems', problemsRoutes);
+app.use('/api/contests', contestsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/submissions', submissionsRoutes);
+app.use('/api/users', usersRoutes);
 
 // ── Global Error Handler ─────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
@@ -75,7 +75,8 @@ const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   console.warn(`\n⚡ Forge IDE Server running on port ${PORT}`);
   console.warn(`   Health: http://localhost:${PORT}/api/health`);
-  console.warn(`   Auth:   http://localhost:${PORT}/api/auth\n`);
+  console.warn(`   Auth:   http://localhost:${PORT}/api/auth`);
+  console.warn(`   RC WS:  ws://localhost:${PORT}/rc\n`);
 });
 
 export { app, httpServer, io };

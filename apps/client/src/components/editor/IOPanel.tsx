@@ -1,8 +1,9 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useState, useCallback } from 'react';
 
+import { useRunTests } from '../../hooks/useRunTests';
 import type { Verdict } from '../../store/editorStore';
 import { useEditorStore } from '../../store/editorStore';
 
@@ -68,8 +69,7 @@ export function IOPanel() {
     isRunningTests,
     testResults,
     currentProblem,
-    setRunning,
-    setRunningTests,
+    currentProblem,
   } = useEditorStore();
 
   const [copied, setCopied] = useState(false);
@@ -84,9 +84,17 @@ export function IOPanel() {
     }
   }, [stdout]);
 
+  const { runTests } = useRunTests();
+
   const handleRunAllTests = () => {
-    setRunningTests(true);
-    // Actual execution will be implemented in Prompt 4
+    const { code, language, currentProblem } = useEditorStore.getState();
+    runTests({
+      code,
+      language,
+      problemId: currentProblem?.id,
+      cfContestId: currentProblem?.cfContestId || undefined,
+      cfIndex: currentProblem?.cfIndex || undefined,
+    });
   };
 
   const testCases = currentProblem?.testCases || [];

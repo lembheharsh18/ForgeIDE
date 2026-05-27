@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
-import { LANGUAGES, LANGUAGE_KEYS, Language } from '../../config/languages';
+import { LANGUAGES, LANGUAGE_KEYS } from '../../config/languages';
+import { useCodeExecution } from '../../hooks/useCodeExecution';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 import { useEditorStore } from '../../store/editorStore';
@@ -16,8 +17,19 @@ export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, clearAuth } = useAuthStore();
-  const { language, setLanguage, theme, setTheme, rcMode, toggleRCMode, isRunning } =
-    useEditorStore();
+  const {
+    language,
+    setLanguage,
+    theme,
+    setTheme,
+    rcMode,
+    toggleRCMode,
+    isRunning,
+    code,
+    stdin,
+    currentProblem,
+  } = useEditorStore();
+  const { execute } = useCodeExecution();
 
   const isEditorRoute = pathname?.startsWith('/editor');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -46,9 +58,12 @@ export function Topbar() {
   };
 
   const handleRun = () => {
-    // Dispatched via editor store — actual execution in IOPanel
-    const { setRunning } = useEditorStore.getState();
-    setRunning(true);
+    execute({
+      code,
+      language,
+      stdin,
+      problemId: currentProblem?.id,
+    });
   };
 
   const navItems = [
