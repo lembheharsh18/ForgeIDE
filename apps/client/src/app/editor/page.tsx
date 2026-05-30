@@ -1,7 +1,8 @@
 'use client';
 
 import { AnimatePresence } from 'framer-motion';
-import { useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 import { ClubPanel } from '../../components/editor/ClubPanel';
@@ -15,7 +16,9 @@ import { Topbar } from '../../components/layout/Topbar';
 import { LANGUAGES } from '../../config/languages';
 import { useCFProblem } from '../../hooks/useCFProblem';
 import { useCodeExecution } from '../../hooks/useCodeExecution';
+import api from '../../lib/axios';
 import { useEditorStore } from '../../store/editorStore';
+import type { Problem } from '../../store/editorStore';
 
 // ── Resize Handle ────────────────────────────────
 
@@ -58,11 +61,49 @@ function ResizeHandle({ direction = 'horizontal' }: { direction?: 'horizontal' |
 // ── Editor Page ──────────────────────────────────
 
 export default function EditorPage() {
-  const { language, theme, code, stdin, setCode, currentProblem, rcMode } = useEditorStore();
+  const { language, theme, code, stdin, setCode, currentProblem, rcMode, setCurrentProblem } =
+    useEditorStore();
   const { execute } = useCodeExecution();
+  const searchParams = useSearchParams();
 
   // Auto-load CF problem from URL params (?cf=1&problem=A)
   useCFProblem();
+
+  // Auto-load DB problem from URL params (?problem=<id>)
+  const dbProblemId = searchParams?.get('problem');
+  const cfParam = searchParams?.get('cf');
+  useEffect(() => {
+    // Only load from DB if it's not a CF problem URL
+    if (dbProblemId && !cfParam) {
+      const fetchProblem = async () => {
+        try {
+          const { data } = await api.get(`/api/problems/${dbProblemId}`);
+          const problem: Problem = {
+            id: data.id,
+            title: data.title,
+            platform: data.platform,
+            difficulty: data.difficulty,
+            tags: data.tags || [],
+            link: data.link,
+            statement: data.statement,
+            inputSpec: data.inputSpec,
+            outputSpec: data.outputSpec,
+            noteSection: data.noteSection,
+            timeLimit: data.timeLimit,
+            memoryLimit: data.memoryLimit,
+            cfContestId: data.cfContestId,
+            cfIndex: data.cfIndex,
+            testCases: data.testCases,
+            addedById: data.addedById || '',
+          };
+          setCurrentProblem(problem);
+        } catch (err) {
+          console.error('Failed to load problem from DB:', err);
+        }
+      };
+      fetchProblem();
+    }
+  }, [dbProblemId, cfParam, setCurrentProblem]);
 
   const handleRun = useCallback(() => {
     execute({

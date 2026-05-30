@@ -1,0 +1,15 @@
+{
+  "name": "forge-ide-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Forge IDE Chrome Extension for Codeforces",
+  "scripts": {
+    "build": "npx esbuild content.ts --bundle --outfile=dist/content.js --format=iife --target=chrome100 && npx esbuild popup.tsx --bundle --outfile=dist/popup.js --format=iife --target=chrome100 && npx esbuild background.ts --bundle --outfile=dist/background.js --format=esm --target=chrome100 && node build-copy.mjs",
+    "watch": "concurrently \"npx esbuild content.ts --bundle --outfile=dist/content.js --format=iife --target=chrome100 --watch\" \"npx esbuild popup.tsx --bundle --outfile=dist/popup.js --format=iife --target=chrome100 --watch\" \"npx esbuild background.ts --bundle --outfile=dist/background.js --format=esm --target=chrome100 --watch\""
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -12,6 +12,15 @@ export interface LanguageConfig {
   boilerplate: string;
 }
 
+// Codeforces compiler IDs for contest.submit API
+export const CF_LANGUAGE_MAP: Record<string, string> = {
+  cpp: '54', // GNU G++17 7.3.0
+  python: '31', // Python 3.8.10
+  java: '36', // Java 11 64bit
+  javascript: '55', // Node.js 12.16.3
+  go: '32', // Go 1.19.5
+};
+
 export const LANGUAGES: Record<Language, LanguageConfig> = {
   cpp: {
     display: 'C++17',

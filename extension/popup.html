@@ -4,31 +4,298 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Forge IDE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       width: 320px;
-      min-height: 200px;
-      margin: 0;
-      padding: 16px;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 240px;
       background: #0a0a0a;
       color: #f0f0f0;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 20px;
     }
-    h1 {
-      font-size: 18px;
-      margin: 0 0 8px;
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #e8ff5a;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
       color: #e8ff5a;
+      letter-spacing: 1px;
     }
-    p {
-      font-size: 13px;
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="url"] {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #f0f0f0;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      padding: 8px 10px;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: #e8ff5a;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: #e8ff5a;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 12px rgba(232, 255, 90, 0.3);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      background: transparent;
       color: #888;
-      margin: 0;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
     }
+
+    .btn-secondary:hover {
+      border-color: #666;
+      color: #f0f0f0;
+    }
+
+    .btn-danger {
+      width: 100%;
+      background: transparent;
+      color: #ff4545;
+      border: 1px solid #ff4545;
+      border-radius: 4px;
+      padding: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 69, 69, 0.1);
+    }
+
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #888;
+    }
+
+    .username {
+      font-weight: 700;
+      color: #f0f0f0;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      color: #ccc;
+    }
+
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #333;
+      border-radius: 10px;
+      transition: 0.2s;
+    }
+
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      bottom: 3px;
+      background: #888;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: #e8ff5a;
+    }
+
+    .toggle input:checked + .toggle-slider:before {
+      transform: translateX(16px);
+      background: #000;
+    }
+
+    .error {
+      color: #ff4545;
+      font-size: 10px;
+      margin-top: 6px;
+    }
+
+    .success {
+      color: #39ff8a;
+      font-size: 10px;
+      margin-top: 6px;
+    }
+
+    .hidden { display: none; }
+    .gap-8 { gap: 8px; display: flex; flex-direction: column; }
   </style>
 </head>
 <body>
-  <h1>⚡ Forge IDE</h1>
-  <p>Codeforces integration extension. Coming soon.</p>
+  <div class="header">
+    <div class="pulse-dot"></div>
+    <span class="logo">FORGE IDE</span>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading">
+    <p style="color: #666; font-style: italic;">Loading...</p>
+  </div>
+
+  <!-- Login View -->
+  <div id="login-view" class="hidden">
+    <div class="section">
+      <div class="label">FORGE URL</div>
+      <input type="url" id="forge-url-login" placeholder="http://localhost:3000">
+    </div>
+    <div class="section">
+      <div class="label">EMAIL</div>
+      <input type="email" id="email" placeholder="you@example.com">
+    </div>
+    <div class="section">
+      <div class="label">PASSWORD</div>
+      <input type="password" id="password" placeholder="Your password">
+    </div>
+    <div id="login-error" class="error hidden"></div>
+    <button class="btn-primary" id="login-btn">LOGIN</button>
+    <div style="margin-top: 10px;">
+      <button class="btn-secondary" id="save-url-btn">SAVE URL</button>
+    </div>
+  </div>
+
+  <!-- Logged In View -->
+  <div id="logged-in-view" class="hidden">
+    <div class="user-row">
+      <div class="avatar" id="user-avatar"></div>
+      <div>
+        <div class="username" id="user-name"></div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Enable on CF pages</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-enabled" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="section">
+      <div class="label">FORGE URL</div>
+      <input type="url" id="forge-url-settings" placeholder="http://localhost:3000">
+      <button class="btn-secondary" id="save-url-settings-btn" style="margin-top: 6px;">SAVE URL</button>
+    </div>
+
+    <div class="gap-8">
+      <button class="btn-primary" id="open-forge-btn">OPEN FORGE IDE</button>
+      <button class="btn-danger" id="logout-btn">LOGOUT</button>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

@@ -1,17 +1,24 @@
 {
   "manifest_version": 3,
   "name": "Forge IDE for Codeforces",
-  "version": "0.1.0",
-  "description": "Parse Codeforces problems and submit solutions directly from Forge IDE.",
-  "permissions": ["activeTab", "storage"],
+  "description": "Open CF problems in Forge IDE. Submit directly from your editor.",
+  "version": "1.0.0",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["activeTab", "storage", "tabs"],
   "host_permissions": ["https://codeforces.com/*"],
   "content_scripts": [
     {
       "matches": [
-        "https://codeforces.com/problemset/problem/*",
-        "https://codeforces.com/contest/*/problem/*"
+        "https://codeforces.com/problemset/problem/*/*",
+        "https://codeforces.com/contest/*/problem/*",
+        "https://codeforces.com/gym/*/problem/*"
       ],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {
@@ -20,10 +27,5 @@
   },
   "background": {
     "service_worker": "background.js"
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
   }
 }

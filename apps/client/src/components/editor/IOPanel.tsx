@@ -1,11 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
+import { useCFSubmit } from '../../hooks/useCFSubmit';
 import { useRunTests } from '../../hooks/useRunTests';
+import { useCFSettingsStore } from '../../store/cfSettingsStore';
 import type { Verdict } from '../../store/editorStore';
 import { useEditorStore } from '../../store/editorStore';
+import { CFSettingsModal } from '../ui/CFSettingsModal';
 
 // ── Verdict Badge ────────────────────────────────
 
@@ -69,10 +72,18 @@ export function IOPanel() {
     isRunningTests,
     testResults,
     currentProblem,
-    currentProblem,
   } = useEditorStore();
 
   const [copied, setCopied] = useState(false);
+  const [showCFSettings, setShowCFSettings] = useState(false);
+
+  // CF Submit Integration
+  const cfSubmit = useCFSubmit();
+  const { loadFromStorage, isConfigured: cfConfigured } = useCFSettingsStore();
+
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -329,22 +340,105 @@ export function IOPanel() {
 
                 {/* Submit on CF */}
                 {currentProblem?.platform === 'CODEFORCES' && (
-                  <button
-                    className="mt-2 py-1.5 rounded text-[10px] font-bold tracking-wider transition-all duration-200"
-                    style={{
-                      fontFamily: "'Space Mono', monospace",
-                      color: 'var(--blue)',
-                      border: '1px solid var(--blue)',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(90, 158, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    SUBMIT ON CF
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    {/* CF Submit Button */}
+                    <button
+                      onClick={() => {
+                        if (!cfConfigured) {
+                          setShowCFSettings(true);
+                          return;
+                        }
+                        const { code, language, currentProblem: p } = useEditorStore.getState();
+                        if (p?.cfContestId && p?.cfIndex) {
+                          cfSubmit.submitToCF(code, language, p.cfContestId, p.cfIndex);
+                        }
+                      }}
+                      disabled={cfSubmit.isSubmitting || cfSubmit.isPolling}
+                      className="mt-2 py-1.5 rounded text-[10px] font-bold tracking-wider transition-all duration-200 disabled:opacity-50"
+                      style={{
+                        fontFamily: "'Space Mono', monospace",
+                        color: 'var(--blue)',
+                        border: '1px solid var(--blue)',
+                      }}
+                      title={
+                        !cfConfigured ? 'Set CF credentials in profile' : 'Submit to Codeforces'
+                      }
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(90, 158, 255, 0.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      {cfSubmit.isSubmitting
+                        ? '⟳ SUBMITTING...'
+                        : cfSubmit.isPolling
+                          ? '⟳ CHECKING...'
+                          : !cfConfigured
+                            ? '⚙ SET CF CREDS'
+                            : 'SUBMIT ON CF'}
+                    </button>
+
+                    {/* CF Verdict Display */}
+                    {cfSubmit.forgeVerdict && (
+                      <div
+                        className="text-[10px] font-bold p-1.5 rounded text-center"
+                        style={{
+                          fontFamily: "'Space Mono', monospace",
+                          color:
+                            cfSubmit.forgeVerdict === 'AC'
+                              ? 'var(--green)'
+                              : cfSubmit.forgeVerdict === 'TLE'
+                                ? 'var(--orange)'
+                                : 'var(--red)',
+                          border: `1px solid ${
+                            cfSubmit.forgeVerdict === 'AC'
+                              ? 'var(--green)'
+                              : cfSubmit.forgeVerdict === 'TLE'
+                                ? 'var(--orange)'
+                                : 'var(--red)'
+                          }`,
+                        }}
+                      >
+                        {cfSubmit.forgeVerdict === 'AC'
+                          ? '✓ ACCEPTED'
+                          : cfSubmit.forgeVerdict === 'WA'
+                            ? `✕ WA test ${cfSubmit.passedTestCount + 1}`
+                            : cfSubmit.forgeVerdict === 'TLE'
+                              ? '⏱ TLE'
+                              : `✕ ${cfSubmit.cfVerdict}`}
+                      </div>
+                    )}
+
+                    {/* View on CF link */}
+                    {cfSubmit.submissionId && cfSubmit.contestId && (
+                      <a
+                        href={`https://codeforces.com/contest/${cfSubmit.contestId}/submission/${cfSubmit.submissionId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] text-center transition-colors"
+                        style={{
+                          fontFamily: "'Space Mono', monospace",
+                          color: 'var(--blue)',
+                        }}
+                      >
+                        VIEW ON CF ↗
+                      </a>
+                    )}
+
+                    {/* CF Error */}
+                    {cfSubmit.error && (
+                      <p
+                        className="text-[9px] leading-relaxed"
+                        style={{
+                          fontFamily: "'Space Mono', monospace",
+                          color: 'var(--red)',
+                        }}
+                      >
+                        {cfSubmit.error}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -534,6 +628,8 @@ export function IOPanel() {
           </div>
         )}
       </div>
+      {/* CF Settings Modal */}
+      <CFSettingsModal isOpen={showCFSettings} onClose={() => setShowCFSettings(false)} />
     </div>
   );
 }

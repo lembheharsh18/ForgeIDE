@@ -10,6 +10,7 @@ import { useCodeExecution } from '../../hooks/useCodeExecution';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 import { useEditorStore } from '../../store/editorStore';
+import { CFSettingsModal } from '../ui/CFSettingsModal';
 
 // ── Topbar Component ─────────────────────────────
 
@@ -33,6 +34,7 @@ export function Topbar() {
 
   const isEditorRoute = pathname?.startsWith('/editor');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCFSettings, setShowCFSettings] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -313,6 +315,25 @@ export function Topbar() {
                     </Link>
                   ))}
                   <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      setShowCFSettings(true);
+                    }}
+                    className="w-full text-left block px-3 py-2 text-xs transition-colors duration-150"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      color: 'var(--text-primary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    CF Settings
+                  </button>
+                  <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 text-xs transition-colors duration-150"
                     style={{
@@ -389,6 +410,9 @@ export function Topbar() {
           {theme === 'dark' ? '☽' : '☀'}
         </button>
       </div>
+
+      {/* CF Settings Modal */}
+      <CFSettingsModal isOpen={showCFSettings} onClose={() => setShowCFSettings(false)} />
     </header>
   );
 }
