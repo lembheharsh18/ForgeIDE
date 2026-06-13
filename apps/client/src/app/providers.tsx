@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Toaster } from 'react-hot-toast';
 
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { GlobalEffects } from '../components/layout/GlobalEffects';
 import { AuthProvider } from '../components/providers/AuthProvider';
 import { QueryProvider } from '../components/providers/QueryProvider';
@@ -57,7 +58,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <QueryProvider>
         <AuthProvider>
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
           <GlobalEffects />
           <Toaster
             position="bottom-right"

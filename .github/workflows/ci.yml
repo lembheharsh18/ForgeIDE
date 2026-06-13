@@ -2,7 +2,7 @@ name: Forge IDE CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
 
@@ -62,9 +62,62 @@ jobs:
       - name: Typecheck server
         run: npm run typecheck -w apps/server
 
-  # ── Test ────────────────────────────────────────
-  test:
-    name: Test
+  # ── Server Tests ────────────────────────────────
+  test-server:
+    name: Server Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: forge_test
+          POSTGRES_USER: forge
+          POSTGRES_PASSWORD: forge_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U forge"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://forge:forge_secret@localhost:5432/forge_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-secret-key-minimum-32-characters-here
+      JWT_REFRESH_SECRET: test-refresh-secret-32-characters-ok
+      PISTON_URL: https://emkc.org/api/v2/piston
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Prisma migrations
+        run: cd apps/server && npx prisma migrate deploy
+
+      - name: Run server tests
+        run: npm run test -w apps/server
+
+  # ── Client Tests ────────────────────────────────
+  test-client:
+    name: Client Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -79,14 +132,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run server tests
-        run: npm run test -w apps/server -- --passWithNoTests
+      - name: Run client tests
+        run: npm run test -w apps/client -- --passWithNoTests
 
   # ── Build ───────────────────────────────────────
   build:
     name: Build Check
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test]
+    needs: [lint, typecheck, test-server, test-client]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

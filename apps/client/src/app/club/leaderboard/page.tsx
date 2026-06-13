@@ -143,7 +143,11 @@ export default function LeaderboardPage() {
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${(entry.score / maxScore) * 100}%` }}
-                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                            transition={{
+                              duration: 0.5,
+                              ease: 'easeOut',
+                              delay: index * 0.04 + 0.4,
+                            }}
                             className="h-full bg-accent"
                           />
                         </div>

@@ -1,19 +1,24 @@
-FROM node:20-alpine AS base
-
+# ── Stage 1: Builder ──────────────────────────────
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy root workspace files
-COPY package.json package-lock.json* ./
-COPY apps/client/package.json ./apps/client/
-COPY packages/shared/package.json ./packages/shared/
-
+COPY package*.json ./
 RUN npm ci
 
-COPY packages/shared ./packages/shared
-COPY apps/client ./apps/client
+COPY . .
+RUN npm run build
 
-WORKDIR /app/apps/client
+# ── Stage 2: Production ──────────────────────────
+FROM node:20-alpine AS production
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/public ./public
+COPY package*.json ./
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "start"]

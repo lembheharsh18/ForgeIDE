@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { ProtectedRoute } from '../../../components/layout/ProtectedRoute';
+import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import { Avatar } from '../../../components/ui/Avatar';
 import { Badge, type BadgeVariant } from '../../../components/ui/Badge';
 import { Countdown } from '../../../components/ui/Countdown';
@@ -106,10 +107,15 @@ export default function ClubDashboard() {
   }, []);
 
   const statCards = [
-    { title: 'MEMBERS', value: stats?.members ?? '-', color: 'text-blue' },
-    { title: 'PROBLEMS SOLVED', value: stats?.solved ?? '-', color: 'text-[#39ff8a]' },
-    { title: 'YOUR RANK', value: stats?.rank ? `#${stats.rank}` : '-', color: 'text-accent' },
-    { title: 'ACTIVE CONTESTS', value: stats?.activeContests ?? '-', color: 'text-orange' },
+    { title: 'MEMBERS', value: stats?.members ?? 0, color: 'text-blue', prefix: '' },
+    { title: 'PROBLEMS SOLVED', value: stats?.solved ?? 0, color: 'text-[#39ff8a]', prefix: '' },
+    { title: 'YOUR RANK', value: stats?.rank ?? 0, color: 'text-accent', prefix: '#' },
+    {
+      title: 'ACTIVE CONTESTS',
+      value: stats?.activeContests ?? 0,
+      color: 'text-orange',
+      prefix: '',
+    },
   ];
 
   return (
@@ -154,7 +160,17 @@ export default function ClubDashboard() {
                 <span className="text-xs font-mono font-bold tracking-wider text-text-muted">
                   {stat.title}
                 </span>
-                <span className={`font-mono font-bold text-4xl ${stat.color}`}>{stat.value}</span>
+                <span className={`font-mono font-bold text-4xl ${stat.color}`}>
+                  {typeof stat.value === 'number' ? (
+                    <AnimatedNumber
+                      value={stat.value}
+                      delay={i * 100 + 300}
+                      prefix={stat.prefix || ''}
+                    />
+                  ) : (
+                    stat.value
+                  )}
+                </span>
               </motion.div>
             ))}
           </div>

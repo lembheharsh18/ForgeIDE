@@ -1,22 +1,26 @@
-FROM node:20-alpine AS base
-
+# ── Stage 1: Builder ──────────────────────────────
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy root workspace files
-COPY package.json package-lock.json* ./
-COPY apps/server/package.json ./apps/server/
-COPY packages/shared/package.json ./packages/shared/
-
+COPY package*.json ./
+COPY prisma ./prisma
 RUN npm ci
 
-COPY packages/shared ./packages/shared
-COPY apps/server ./apps/server
-
-WORKDIR /app/apps/server
-
-# Generate Prisma client
+COPY . .
 RUN npx prisma generate
+RUN npm run build
+
+# ── Stage 2: Production ──────────────────────────
+FROM node:20-alpine AS production
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY package*.json ./
 
 EXPOSE 4000
 
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

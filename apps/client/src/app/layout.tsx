@@ -3,12 +3,30 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 
+// ── SEO Metadata ─────────────────────────────────
+
 export const metadata: Metadata = {
-  title: 'FORGE IDE — PICT Coders League',
+  title: 'Forge IDE — Competitive Programming Platform',
   description:
-    'A competitive programming platform built for PICT Coders League. Code, compete, and climb the leaderboard.',
-  keywords: ['competitive programming', 'coding', 'PICT', 'Coders League', 'IDE'],
+    'Write, run, and debug competitive programming solutions in your browser. RC Interactor, CF integration, club leaderboards.',
+  keywords: [
+    'competitive programming',
+    'coding',
+    'PICT',
+    'Coders League',
+    'IDE',
+    'Codeforces',
+    'Forge IDE',
+  ],
+  openGraph: {
+    title: 'Forge IDE',
+    description:
+      'Write, run, and debug competitive programming solutions in your browser. RC Interactor, CF integration, club leaderboards.',
+    type: 'website',
+  },
 };
+
+// ── Root Layout ──────────────────────────────────
 
 export default function RootLayout({
   children,

@@ -42,11 +42,34 @@ app.use(cookieParser());
 app.use(generalLimiter);
 
 // ── Health Check ─────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
+app.get('/health', async (_req, res) => {
+  let dbStatus = 'disconnected';
+  let redisStatus = 'disconnected';
+
+  try {
+    const { prisma } = await import('./config/db');
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = 'connected';
+  } catch {
+    dbStatus = 'error';
+  }
+
+  try {
+    const { redis } = await import('./config/redis');
+    await redis.ping();
+    redisStatus = 'connected';
+  } catch {
+    redisStatus = 'error';
+  }
+
+  const status = dbStatus === 'connected' && redisStatus === 'connected' ? 'ok' : 'degraded';
+
+  res.status(status === 'ok' ? 200 : 503).json({
+    status,
     uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    database: dbStatus,
+    redis: redisStatus,
   });
 });
 

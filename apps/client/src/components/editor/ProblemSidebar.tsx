@@ -171,6 +171,7 @@ export function ProblemSidebar() {
                 key={problem.id}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
+                whileHover={{ x: 3 }}
                 transition={{ delay: i * 0.03, duration: 0.2 }}
                 onClick={() => handleSelectProblem(problem)}
                 className="w-full text-left px-3 py-2 transition-all duration-150 group"

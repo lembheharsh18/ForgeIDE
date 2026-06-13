@@ -88,53 +88,65 @@ export function Topbar() {
       {/* ── Left: Logo + Nav ──────────────────── */}
       <div className="flex items-center gap-5">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="relative">
-            <div
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: 'var(--accent)' }}
-            />
-            <motion.div
-              className="absolute inset-0 w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: 'var(--accent)' }}
-              animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </div>
-          <span
-            className="text-sm font-extrabold tracking-widest"
-            style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
-          >
-            FORGE
-            <span style={{ opacity: 0.4 }}>IDE</span>
-          </span>
-        </Link>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Link href="/" className="flex items-center gap-2.5 group" aria-label="Forge IDE Home">
+            <div className="relative">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: 'var(--accent)' }}
+              />
+              <motion.div
+                className="absolute inset-0 w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: 'var(--accent)' }}
+                animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+            <span
+              className="text-sm font-extrabold tracking-widest"
+              style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
+            >
+              FORGE
+              <span style={{ opacity: 0.4 }}>IDE</span>
+            </span>
+          </Link>
+        </motion.div>
 
         {/* Nav pills */}
         {!isEditorRoute && (
           <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
+            {navItems.map((item, idx) => {
               const isActive = pathname === item.href;
               return (
-                <Link
+                <motion.div
                   key={item.href}
-                  href={item.href}
-                  className="px-3 py-1 rounded text-xs transition-all duration-200"
-                  style={{
-                    fontFamily: "'Space Mono', monospace",
-                    backgroundColor: isActive ? 'var(--accent)' : 'transparent',
-                    color: isActive ? '#0a0a0a' : 'var(--text-muted)',
-                    fontWeight: isActive ? 700 : 400,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.color = 'var(--text-primary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.color = 'var(--text-muted)';
-                  }}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: idx * 0.05 }}
                 >
-                  {item.label}
-                </Link>
+                  <Link
+                    href={item.href}
+                    className="px-3 py-1 rounded text-xs transition-all duration-200"
+                    style={{
+                      fontFamily: "'Space Mono', monospace",
+                      backgroundColor: isActive ? 'var(--accent)' : 'transparent',
+                      color: isActive ? '#0a0a0a' : 'var(--text-muted)',
+                      fontWeight: isActive ? 700 : 400,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.color = 'var(--text-primary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                </motion.div>
               );
             })}
           </nav>
@@ -184,6 +196,7 @@ export function Topbar() {
         {isEditorRoute && (
           <button
             onClick={toggleRCMode}
+            aria-label={rcMode ? 'Disable RC Mode' : 'Enable RC Mode'}
             className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-all duration-200"
             style={{
               fontFamily: "'Space Mono', monospace",
@@ -209,6 +222,7 @@ export function Topbar() {
             id="run-button"
             onClick={handleRun}
             disabled={isRunning}
+            aria-label={isRunning ? 'Running code' : 'Run code'}
             className="flex items-center gap-1.5 px-4 rounded text-xs font-bold transition-all duration-200 disabled:opacity-60"
             style={{
               fontFamily: "'Space Mono', monospace",
@@ -390,6 +404,7 @@ export function Topbar() {
         {/* Theme toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           className="flex items-center justify-center rounded transition-all duration-200"
           style={{
             width: '32px',
