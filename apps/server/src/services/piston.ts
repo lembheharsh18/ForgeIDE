@@ -1,6 +1,14 @@
 // ── Piston Code Execution Service ────────────────
 
+import { spawn } from 'child_process';
+import { randomUUID } from 'crypto';
+import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import path from 'path';
+
 const PISTON_URL = process.env.PISTON_URL || 'https://emkc.org/api/v2/piston';
+const EXECUTION_BACKEND = process.env.CODE_EXECUTION_BACKEND || 'piston';
+const LOCAL_EXECUTION_FALLBACK = process.env.LOCAL_EXECUTION_FALLBACK === 'true';
 
 // ── Types ────────────────────────────────────────
 
@@ -40,6 +48,10 @@ export type Verdict =
 // ── Execute Code via Piston ──────────────────────
 
 export async function executeCode(params: PistonRequest): Promise<PistonResponse> {
+  if (EXECUTION_BACKEND === 'local') {
+    return executeCodeLocal(params);
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -68,6 +80,9 @@ export async function executeCode(params: PistonRequest): Promise<PistonResponse
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Code execution timed out (15s limit)');
     }
+    if (LOCAL_EXECUTION_FALLBACK) {
+      return executeCodeLocal(params);
+    }
     throw err;
   } finally {
     clearTimeout(timeout);
@@ -75,6 +90,169 @@ export async function executeCode(params: PistonRequest): Promise<PistonResponse
 }
 
 // ── Compute Verdict ──────────────────────────────
+
+interface LocalCommand {
+  command: string;
+  args: string[];
+}
+
+interface LocalPlan {
+  sourceName: string;
+  compile?: LocalCommand;
+  run: LocalCommand;
+}
+
+function getLocalPlan(language: string, dir: string): LocalPlan {
+  const executable = process.platform === 'win32' ? 'main.exe' : 'main';
+
+  switch (language) {
+    case 'javascript':
+      return {
+        sourceName: 'main.js',
+        run: { command: process.execPath, args: [path.join(dir, 'main.js')] },
+      };
+    case 'python':
+      return {
+        sourceName: 'main.py',
+        run: { command: 'python', args: [path.join(dir, 'main.py')] },
+      };
+    case 'c++':
+      return {
+        sourceName: 'main.cpp',
+        compile: {
+          command: 'g++',
+          args: [
+            path.join(dir, 'main.cpp'),
+            '-std=c++17',
+            '-O2',
+            '-pipe',
+            '-o',
+            path.join(dir, executable),
+          ],
+        },
+        run: { command: path.join(dir, executable), args: [] },
+      };
+    case 'java':
+      return {
+        sourceName: 'Main.java',
+        compile: { command: 'javac', args: [path.join(dir, 'Main.java')] },
+        run: { command: 'java', args: ['-cp', dir, 'Main'] },
+      };
+    case 'go':
+      return {
+        sourceName: 'main.go',
+        run: { command: 'go', args: ['run', path.join(dir, 'main.go')] },
+      };
+    default:
+      throw new Error(`Local execution is not configured for language: ${language}`);
+  }
+}
+
+async function executeCodeLocal(params: PistonRequest): Promise<PistonResponse> {
+  const dir = await mkdtemp(path.join(tmpdir(), `forge-${randomUUID()}-`));
+  const plan = getLocalPlan(params.language, dir);
+  const source = params.files[0]?.content ?? '';
+  const sourcePath = path.join(dir, plan.sourceName);
+
+  try {
+    await writeFile(sourcePath, source, 'utf8');
+
+    const compile = plan.compile
+      ? await runLocalProcess(plan.compile, '', params.compile_timeout ?? 10000, dir)
+      : undefined;
+
+    if (compile && (compile.code !== 0 || compile.signal)) {
+      return {
+        compile,
+        run: emptyRunResult(),
+        language: params.language,
+        version: params.version,
+      };
+    }
+
+    const run = await runLocalProcess(
+      plan.run,
+      params.stdin || '',
+      params.run_timeout ?? 3000,
+      dir,
+    );
+
+    return {
+      ...(compile ? { compile } : {}),
+      run,
+      language: params.language,
+      version: params.version,
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+function emptyRunResult(): PistonRunResult {
+  return {
+    stdout: '',
+    stderr: '',
+    code: 0,
+    signal: null,
+    output: '',
+  };
+}
+
+function runLocalProcess(
+  command: LocalCommand,
+  stdin: string,
+  timeoutMs: number,
+  cwd: string,
+): Promise<PistonRunResult> {
+  return new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+
+    const child = spawn(command.command, command.args, {
+      cwd,
+      windowsHide: true,
+    });
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      resolve({
+        stdout,
+        stderr: stderr || error.message,
+        code: 1,
+        signal: null,
+        output: `${stdout}${stderr || error.message}`,
+      });
+    });
+
+    child.on('close', (code, signal) => {
+      clearTimeout(timer);
+      const finalSignal = timedOut ? 'SIGKILL' : signal;
+      resolve({
+        stdout,
+        stderr,
+        code: code ?? (timedOut ? -1 : 1),
+        signal: finalSignal,
+        output: `${stdout}${stderr}`,
+      });
+    });
+
+    child.stdin.end(stdin);
+  });
+}
 
 export function computeVerdict(response: PistonResponse): Verdict {
   // Check compile errors first

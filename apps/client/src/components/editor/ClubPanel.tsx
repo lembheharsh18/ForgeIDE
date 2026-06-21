@@ -8,18 +8,21 @@ import api from '../../lib/axios';
 // ── Types ────────────────────────────────────────
 
 interface LeaderboardEntry {
-  rank: number;
-  user: { username: string };
-  score: number;
-  solvedCount: number;
+  rank?: number;
+  user?: { username?: string | null } | null;
+  username?: string | null;
+  score?: number;
+  solvedCount?: number;
 }
 
 interface RecentSubmission {
   id: string;
-  user: { username: string };
-  problem: { title: string };
-  verdict: string;
-  createdAt: string;
+  user?: { username?: string | null } | null;
+  username?: string | null;
+  problem?: { title?: string | null } | null;
+  problemTitle?: string | null;
+  verdict?: string;
+  createdAt?: string;
 }
 
 // ── Rank Color ───────────────────────────────────
@@ -65,6 +68,38 @@ function getVerdictLabel(verdict: string): string {
   }
 }
 
+function getLeaderboardEntries(data: unknown): LeaderboardEntry[] {
+  if (Array.isArray(data)) return data as LeaderboardEntry[];
+  if (data && typeof data === 'object' && Array.isArray((data as { entries?: unknown }).entries)) {
+    return (data as { entries: LeaderboardEntry[] }).entries;
+  }
+  return [];
+}
+
+function getRecentSubmissions(data: unknown): RecentSubmission[] {
+  if (
+    data &&
+    typeof data === 'object' &&
+    Array.isArray((data as { submissions?: unknown }).submissions)
+  ) {
+    return (data as { submissions: RecentSubmission[] }).submissions;
+  }
+  if (Array.isArray(data)) return data as RecentSubmission[];
+  return [];
+}
+
+function getEntryUsername(entry: LeaderboardEntry): string {
+  return entry.user?.username ?? entry.username ?? 'unknown';
+}
+
+function getSubmissionUsername(submission: RecentSubmission): string {
+  return submission.user?.username ?? submission.username ?? 'unknown';
+}
+
+function getSubmissionProblemTitle(submission: RecentSubmission): string {
+  return submission.problem?.title ?? submission.problemTitle ?? 'Unknown problem';
+}
+
 // ── Club Panel ───────────────────────────────────
 
 export function ClubPanel() {
@@ -82,10 +117,10 @@ export function ClubPanel() {
         ]);
 
         if (lbRes.status === 'fulfilled') {
-          setLeaderboard(lbRes.value.data.entries || []);
+          setLeaderboard(getLeaderboardEntries(lbRes.value.data));
         }
         if (subRes.status === 'fulfilled') {
-          setSubmissions(subRes.value.data.submissions || []);
+          setSubmissions(getRecentSubmissions(subRes.value.data));
         }
       } catch {
         // API not available yet — use empty data
@@ -96,7 +131,8 @@ export function ClubPanel() {
     fetchData();
   }, []);
 
-  const maxScore = leaderboard.length > 0 ? Math.max(...leaderboard.map((e) => e.score), 1) : 1;
+  const maxScore =
+    leaderboard.length > 0 ? Math.max(...leaderboard.map((e) => Number(e.score) || 0), 1) : 1;
 
   return (
     <div
@@ -155,10 +191,10 @@ export function ClubPanel() {
                     className="text-[10px] font-bold w-4 text-right"
                     style={{
                       fontFamily: "'Space Mono', monospace",
-                      color: getRankColor(entry.rank),
+                      color: getRankColor(entry.rank ?? i + 1),
                     }}
                   >
-                    {entry.rank}
+                    {entry.rank ?? i + 1}
                   </span>
                   <span
                     className="text-[11px] truncate flex-1"
@@ -210,10 +246,10 @@ export function ClubPanel() {
                     className="text-[10px] font-bold w-4 text-right"
                     style={{
                       fontFamily: "'Space Mono', monospace",
-                      color: getRankColor(entry.rank),
+                      color: getRankColor(entry.rank ?? i + 1),
                     }}
                   >
-                    {entry.rank}
+                    {entry.rank ?? i + 1}
                   </span>
                   <span
                     className="text-[11px] truncate flex-1"
@@ -222,7 +258,7 @@ export function ClubPanel() {
                       color: 'var(--text-secondary)',
                     }}
                   >
-                    {entry.user.username}
+                    {getEntryUsername(entry)}
                   </span>
                   <span
                     className="text-[11px] font-bold"
@@ -231,7 +267,7 @@ export function ClubPanel() {
                       color: 'var(--accent)',
                     }}
                   >
-                    {entry.score}
+                    {Number(entry.score) || 0}
                   </span>
                 </div>
                 {/* Score bar animation */}
@@ -244,7 +280,7 @@ export function ClubPanel() {
                     style={{ backgroundColor: 'var(--accent)' }}
                     initial={{ width: 0 }}
                     animate={{
-                      width: `${(entry.score / maxScore) * 100}%`,
+                      width: `${((Number(entry.score) || 0) / maxScore) * 100}%`,
                     }}
                     transition={{
                       duration: 0.5,
@@ -318,13 +354,13 @@ export function ClubPanel() {
                   className="flex items-center gap-1.5 text-[10px]"
                   style={{ fontFamily: "'Space Mono', monospace" }}
                 >
-                  <span style={{ color: 'var(--text-secondary)' }}>{s.user.username}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{getSubmissionUsername(s)}</span>
                   <span style={{ color: 'var(--text-muted)' }}>·</span>
                   <span className="truncate flex-1" style={{ color: 'var(--text-muted)' }}>
-                    {s.problem.title}
+                    {getSubmissionProblemTitle(s)}
                   </span>
-                  <span style={{ color: getVerdictColor(s.verdict) }}>
-                    {getVerdictLabel(s.verdict)}
+                  <span style={{ color: getVerdictColor(s.verdict ?? 'PENDING') }}>
+                    {getVerdictLabel(s.verdict ?? 'PENDING')}
                   </span>
                 </div>
               ))}

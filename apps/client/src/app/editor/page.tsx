@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { Suspense, useCallback, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 import { ClubPanel } from '../../components/editor/ClubPanel';
@@ -60,7 +60,7 @@ function ResizeHandle({ direction = 'horizontal' }: { direction?: 'horizontal' |
 
 // ── Editor Page ──────────────────────────────────
 
-export default function EditorPage() {
+function EditorContent() {
   const { language, theme, code, stdin, setCode, currentProblem, rcMode, setCurrentProblem } =
     useEditorStore();
   const { execute } = useCodeExecution();
@@ -210,5 +210,19 @@ export default function EditorPage() {
       {/* Status Bar */}
       <StatusBar />
     </div>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-background text-text">
+          Loading editor...
+        </div>
+      }
+    >
+      <EditorContent />
+    </Suspense>
   );
 }

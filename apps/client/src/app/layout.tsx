@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: 'Forge IDE — Competitive Programming Platform',
   description:
     'Write, run, and debug competitive programming solutions in your browser. RC Interactor, CF integration, club leaderboards.',
+  icons: {
+    icon: '/favicon.ico',
+  },
   keywords: [
     'competitive programming',
     'coding',

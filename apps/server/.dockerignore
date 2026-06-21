@@ -1,0 +1,11 @@
+# Ignore node_modules and build artifacts
+node_modules
+dist
+
+# Ignore development and config files
+.env*
+.eslintrc.json
+jest.config.ts
+nodemon.json
+README.md
+tsconfig.json

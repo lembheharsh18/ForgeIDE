@@ -30,6 +30,9 @@ const runTestsSchema = z.object({
   cfIndex: z.string().optional(),
 });
 
+const RUN_TIMEOUT_MS = 3000;
+const COMPILE_TIMEOUT_MS = 10000;
+
 // ── POST /api/execute ────────────────────────────
 
 router.post('/', requireAuth, executeLimiter, async (req: Request, res: Response) => {
@@ -42,8 +45,8 @@ router.post('/', requireAuth, executeLimiter, async (req: Request, res: Response
       version: lang.pistonVersion,
       files: [{ name: `main${lang.fileExtension}`, content: body.code }],
       stdin: body.stdin,
-      run_timeout: 5000,
-      compile_timeout: 10000,
+      run_timeout: RUN_TIMEOUT_MS,
+      compile_timeout: COMPILE_TIMEOUT_MS,
     });
 
     const verdict = computeVerdict(result);
@@ -175,8 +178,8 @@ router.post('/run-tests', requireAuth, testResultLimiter, async (req: Request, r
           version: lang.pistonVersion,
           files: [{ name: `main${lang.fileExtension}`, content: body.code }],
           stdin: tc.input,
-          run_timeout: 5000,
-          compile_timeout: 10000,
+          run_timeout: RUN_TIMEOUT_MS,
+          compile_timeout: COMPILE_TIMEOUT_MS,
         });
 
         const verdict = computeVerdict(execResult);

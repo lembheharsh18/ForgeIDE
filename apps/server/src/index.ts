@@ -97,7 +97,7 @@ const PORT = process.env.PORT || 4000;
 
 httpServer.listen(PORT, () => {
   console.warn(`\n⚡ Forge IDE Server running on port ${PORT}`);
-  console.warn(`   Health: http://localhost:${PORT}/api/health`);
+  console.warn(`   Health: http://localhost:${PORT}/health`);
   console.warn(`   Auth:   http://localhost:${PORT}/api/auth`);
   console.warn(`   RC WS:  ws://localhost:${PORT}/rc\n`);
 });

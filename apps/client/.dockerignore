@@ -1,0 +1,12 @@
+# Ignore node_modules and build artifacts
+node_modules
+.next
+
+# Ignore development and config files
+.env*
+.eslintrc.json
+jest.config.ts
+next.config.mjs
+postcss.config.mjs
+README.md
+tsconfig.json
