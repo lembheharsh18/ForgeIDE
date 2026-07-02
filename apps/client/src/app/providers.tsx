@@ -1,63 +1,43 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { GlobalEffects } from '../components/layout/GlobalEffects';
 import { AuthProvider } from '../components/providers/AuthProvider';
 import { QueryProvider } from '../components/providers/QueryProvider';
+import { useEditorStore } from '../store/editorStore';
 
-// ── Theme Context ────────────────────────────────
+// ── Theme Sync ───────────────────────────────────
+// Reads the stored theme on mount and applies the
+// data-theme attribute. All further toggling goes
+// through editorStore.setTheme().
 
-type Theme = 'dark' | 'light';
+function ThemeSync({ children }: { children: React.ReactNode }) {
+  const theme = useEditorStore((s) => s.theme);
+  const [mounted, setMounted] = useState(false);
 
-interface ThemeContextValue {
-  theme: Theme;
-  toggleTheme: () => void;
-}
-
-const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
-  toggleTheme: () => {},
-});
-
-export const useTheme = () => useContext(ThemeContext);
-
-// ── Theme Provider ───────────────────────────────
-
-function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark');
-
-  // Initialize theme from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('forge_theme') as Theme | null;
-    const initial = stored || 'dark';
-    setTheme(initial);
-    document.documentElement.setAttribute('data-theme', initial === 'light' ? 'light' : '');
+    setMounted(true);
   }, []);
 
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
-      const next = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('forge_theme', next);
-      document.documentElement.setAttribute('data-theme', next === 'light' ? 'light' : '');
-      // Set cookie for SSR hydration (1 year)
-      document.cookie = `forge_theme=${next};path=/;max-age=${365 * 24 * 60 * 60};samesite=strict`;
-      return next;
-    });
-  }, []);
+  // Apply data-theme attribute whenever theme changes (after mount)
+  useEffect(() => {
+    if (!mounted) return;
+    document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
+  }, [theme, mounted]);
 
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return <>{children}</>;
 }
 
 // ── Root Providers ───────────────────────────────
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <QueryProvider>
-        <AuthProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <ThemeSync>
           <ErrorBoundary>{children}</ErrorBoundary>
           <GlobalEffects />
           <Toaster
@@ -85,8 +65,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               },
             }}
           />
-        </AuthProvider>
-      </QueryProvider>
-    </ThemeProvider>
+        </ThemeSync>
+      </AuthProvider>
+    </QueryProvider>
   );
 }

@@ -12,6 +12,9 @@ import { useAuthStore } from '../../store/authStore';
 import { useEditorStore } from '../../store/editorStore';
 import { CFSettingsModal } from '../ui/CFSettingsModal';
 
+// Safely detect Ctrl vs Cmd key based on OS
+const MOD_KEY = typeof navigator !== 'undefined' && /Mac/.test(navigator.userAgent) ? '⌘' : 'Ctrl';
+
 // ── Topbar Component ─────────────────────────────
 
 export function Topbar() {
@@ -35,7 +38,14 @@ export function Topbar() {
   const isEditorRoute = pathname?.startsWith('/editor');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCFSettings, setShowCFSettings] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Hydrate store + flag mounted to avoid hydration mismatch
+  useEffect(() => {
+    useEditorStore.getState().hydrate();
+    setMounted(true);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -161,6 +171,7 @@ export function Topbar() {
             return (
               <button
                 key={lang}
+                aria-label={`Switch to ${LANGUAGES[lang].display}`}
                 onClick={() => setLanguage(lang)}
                 className="px-3 py-1 rounded text-xs transition-all duration-200"
                 style={{
@@ -223,6 +234,7 @@ export function Topbar() {
             onClick={handleRun}
             disabled={isRunning}
             aria-label={isRunning ? 'Running code' : 'Run code'}
+            title={`Run code (${MOD_KEY}+Enter)`}
             className="flex items-center gap-1.5 px-4 rounded text-xs font-bold transition-all duration-200 disabled:opacity-60"
             style={{
               fontFamily: "'Space Mono', monospace",
@@ -395,6 +407,12 @@ export function Topbar() {
                 backgroundColor: 'var(--accent)',
                 color: '#0a0a0a',
               }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
               REGISTER
             </Link>
@@ -422,7 +440,7 @@ export function Topbar() {
             e.currentTarget.style.color = 'var(--text-primary)';
           }}
         >
-          {theme === 'dark' ? '☽' : '☀'}
+          {mounted ? (theme === 'dark' ? '☽' : '☀') : '☽'}
         </button>
       </div>
 

@@ -58,9 +58,13 @@ interface EditorState {
   currentProblem: Problem | null;
   rcMode: boolean;
   fontSize: number;
+  executionTimeMs: number | null;
+  executionMemoryKb: number | null;
+  _hydrated: boolean;
 }
 
 interface EditorActions {
+  hydrate: () => void;
   setLanguage: (language: Language) => void;
   setTheme: (theme: 'dark' | 'light') => void;
   setCode: (code: string) => void;
@@ -74,66 +78,88 @@ interface EditorActions {
   setCurrentProblem: (problem: Problem | null) => void;
   toggleRCMode: () => void;
   setFontSize: (size: number) => void;
-}
-
-// ── Helpers ──────────────────────────────────────
-
-function getStoredTheme(): 'dark' | 'light' {
-  if (typeof window === 'undefined') return 'dark';
-  return (localStorage.getItem('forge_theme') as 'dark' | 'light') || 'dark';
-}
-
-function getStoredLanguage(): Language {
-  if (typeof window === 'undefined') return 'cpp';
-  return (localStorage.getItem('forge_language') as Language) || 'cpp';
+  setExecutionMetrics: (timeMs: number | null, memoryKb: number | null) => void;
 }
 
 // ── Editor Store ─────────────────────────────────
+// Initialize with SSR-safe defaults (dark theme, cpp).
+// Call hydrate() after mount to read localStorage.
 
-export const useEditorStore = create<EditorState & EditorActions>((set) => {
-  const storedLang = getStoredLanguage();
+export const useEditorStore = create<EditorState & EditorActions>((set, get) => ({
+  // SSR-safe defaults — must match server render
+  language: 'cpp',
+  theme: 'dark',
+  code: LANGUAGES['cpp'].boilerplate,
+  stdin: '',
+  stdout: '',
+  stderr: '',
+  verdict: null,
+  isRunning: false,
+  isRunningTests: false,
+  activeTab: 'custom',
+  testResults: null,
+  currentProblem: null,
+  rcMode: false,
+  fontSize: 13,
+  executionTimeMs: null,
+  executionMemoryKb: null,
+  _hydrated: false,
 
-  return {
-    language: storedLang,
-    theme: getStoredTheme(),
-    code: LANGUAGES[storedLang].boilerplate,
-    stdin: '',
-    stdout: '',
-    stderr: '',
-    verdict: null,
-    isRunning: false,
-    isRunningTests: false,
-    activeTab: 'custom',
-    testResults: null,
-    currentProblem: null,
-    rcMode: false,
-    fontSize: 13,
+  hydrate: () => {
+    if (typeof window === 'undefined' || get()._hydrated) return;
+    const storedTheme =
+      (localStorage.getItem('forge_theme') as 'dark' | 'light') || 'dark';
+    const storedLang =
+      (localStorage.getItem('forge_language') as Language) || 'cpp';
+    document.documentElement.setAttribute(
+      'data-theme',
+      storedTheme === 'light' ? 'light' : '',
+    );
+    set({
+      theme: storedTheme,
+      language: storedLang,
+      code: LANGUAGES[storedLang].boilerplate,
+      _hydrated: true,
+    });
+  },
 
-    setLanguage: (language) => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('forge_language', language);
+  setLanguage: (language) => {
+    if (typeof window !== 'undefined') {
+      // Save current code for current language before switching
+      const { code, language: prevLang, currentProblem } = get();
+      const prevKey = `forge_code_${currentProblem?.id ?? 'scratch'}_${prevLang}`;
+      try {
+        localStorage.setItem(prevKey, code);
+      } catch {
+        // localStorage full — ignore
       }
-      set({ language });
-    },
+      localStorage.setItem('forge_language', language);
+    }
+    set({ language });
+  },
 
-    setTheme: (theme) => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('forge_theme', theme);
-        document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
-      }
-      set({ theme });
-    },
+  setTheme: (theme) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('forge_theme', theme);
+      document.documentElement.setAttribute(
+        'data-theme',
+        theme === 'light' ? 'light' : '',
+      );
+    }
+    set({ theme });
+  },
 
-    setCode: (code) => set({ code }),
-    setStdin: (stdin) => set({ stdin }),
-    setOutput: (stdout, stderr) => set({ stdout, stderr }),
-    setVerdict: (verdict) => set({ verdict }),
-    setRunning: (isRunning) => set({ isRunning }),
-    setRunningTests: (isRunningTests) => set({ isRunningTests }),
-    setActiveTab: (activeTab) => set({ activeTab }),
-    setTestResults: (testResults) => set({ testResults }),
-    setCurrentProblem: (currentProblem) => set({ currentProblem }),
-    toggleRCMode: () => set((s) => ({ rcMode: !s.rcMode })),
-    setFontSize: (fontSize) => set({ fontSize }),
-  };
-});
+  setCode: (code) => set({ code }),
+  setStdin: (stdin) => set({ stdin }),
+  setOutput: (stdout, stderr) => set({ stdout, stderr }),
+  setVerdict: (verdict) => set({ verdict }),
+  setRunning: (isRunning) => set({ isRunning }),
+  setRunningTests: (isRunningTests) => set({ isRunningTests }),
+  setActiveTab: (activeTab) => set({ activeTab }),
+  setTestResults: (testResults) => set({ testResults }),
+  setCurrentProblem: (currentProblem) => set({ currentProblem }),
+  toggleRCMode: () => set((s) => ({ rcMode: !s.rcMode })),
+  setFontSize: (fontSize) => set({ fontSize }),
+  setExecutionMetrics: (timeMs, memoryKb) =>
+    set({ executionTimeMs: timeMs, executionMemoryKb: memoryKb }),
+}));

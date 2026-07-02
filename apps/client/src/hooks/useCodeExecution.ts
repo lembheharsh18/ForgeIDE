@@ -24,6 +24,7 @@ interface ExecuteResponse {
   signal: string | null;
   verdict: string;
   compileError: string | null;
+  timeMs?: number;
 }
 
 // ── Map API verdict to store verdict ─────────────
@@ -57,8 +58,10 @@ export function useCodeExecution() {
 
   const mutation = useMutation({
     mutationFn: async (req: ExecuteRequest): Promise<ExecuteResponse> => {
+      const start = performance.now();
       const { data } = await api.post('/api/execute', req);
-      return data;
+      const timeMs = Math.round(performance.now() - start);
+      return { ...data, timeMs };
     },
     onMutate: () => {
       setRunning(true);
@@ -69,6 +72,7 @@ export function useCodeExecution() {
       setOutput(data.stdout, data.stderr);
       setVerdict(mapVerdict(data.verdict));
       setRunning(false);
+      useEditorStore.getState().setExecutionMetrics(data.timeMs ?? null, null);
 
       // Show toast for verdict
       const v = mapVerdict(data.verdict);

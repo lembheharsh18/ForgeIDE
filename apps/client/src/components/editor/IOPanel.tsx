@@ -72,6 +72,8 @@ export function IOPanel() {
     isRunningTests,
     testResults,
     currentProblem,
+    executionTimeMs,
+    executionMemoryKb,
   } = useEditorStore();
 
   const [copied, setCopied] = useState(false);
@@ -301,7 +303,7 @@ export function IOPanel() {
                       color: 'var(--text-primary)',
                     }}
                   >
-                    {isRunning ? '—' : '0'}
+                    {isRunning ? '—' : (executionTimeMs ?? '0')}
                     <span
                       className="text-xs font-normal ml-0.5"
                       style={{ color: 'var(--text-muted)' }}
@@ -328,7 +330,7 @@ export function IOPanel() {
                       color: 'var(--text-primary)',
                     }}
                   >
-                    {isRunning ? '—' : '0'}
+                    {isRunning ? '—' : (executionMemoryKb ? Math.round(executionMemoryKb / 1024) : '0')}
                     <span
                       className="text-xs font-normal ml-0.5"
                       style={{ color: 'var(--text-muted)' }}

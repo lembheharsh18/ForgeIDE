@@ -6,6 +6,159 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 import { useAuthStore } from '../store/authStore';
+import { useEditorStore } from '../store/editorStore';
+
+// ── Floating Navbar ──────────────────────────────
+
+function LandingNav() {
+  const { isAuthenticated } = useAuthStore();
+  const theme = useEditorStore((s) => s.theme);
+  const setTheme = useEditorStore((s) => s.setTheme);
+  const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    useEditorStore.getState().hydrate();
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <motion.header
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+      style={{
+        backgroundColor: scrolled
+          ? 'rgba(10, 10, 10, 0.85)'
+          : 'transparent',
+        backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        borderBottom: scrolled
+          ? '1px solid var(--border-subtle)'
+          : '1px solid transparent',
+      }}
+    >
+      <div className="max-w-6xl mx-auto flex items-center justify-between px-6" style={{ height: '56px' }}>
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 group" aria-label="Forge IDE Home">
+          <div className="relative">
+            <div
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: 'var(--accent)' }}
+            />
+            <motion.div
+              className="absolute inset-0 w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: 'var(--accent)' }}
+              animate={{ scale: [1, 1.8, 1], opacity: [0.6, 0, 0.6] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </div>
+          <span
+            className="text-sm font-extrabold tracking-widest"
+            style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
+          >
+            FORGE<span style={{ opacity: 0.4 }}>IDE</span>
+          </span>
+        </Link>
+
+        {/* Nav + Auth */}
+        <div className="flex items-center gap-4">
+          <nav className="hidden md:flex items-center gap-4">
+            {[
+              { label: 'EDITOR', href: '/editor' },
+              { label: 'CLUB', href: '/club/dashboard' },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-xs transition-colors duration-150"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  color: 'var(--text-muted)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          {!isAuthenticated && (
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="px-3 py-1 rounded text-xs transition-all duration-200"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-primary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-default)';
+                }}
+              >
+                LOGIN
+              </Link>
+              <Link
+                href="/register"
+                className="px-3 py-1 rounded text-xs font-bold transition-all duration-200"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  backgroundColor: 'var(--accent)',
+                  color: '#0a0a0a',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                REGISTER
+              </Link>
+            </div>
+          )}
+
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            className="flex items-center justify-center rounded transition-all duration-200"
+            style={{
+              width: '32px',
+              height: '32px',
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              fontSize: '14px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+            }}
+          >
+            {mounted ? (theme === 'dark' ? '☽' : '☀') : '☽'}
+          </button>
+        </div>
+      </div>
+    </motion.header>
+  );
+}
 
 // ── Animated Code Block ──────────────────────────
 
@@ -66,14 +219,21 @@ function TypingCodeBlock() {
     return () => clearInterval(blink);
   }, [cursorVisible]);
 
-  // Basic syntax highlighting
+  // Basic syntax highlighting — HTML-escape first to prevent XSS / broken rendering
   const highlightCode = useCallback((code: string) => {
-    return code
+    // 1. Escape HTML entities FIRST
+    let escaped = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // 2. Apply syntax highlighting on safe text
+    return escaped
       .replace(
-        /(#include|using|namespace|int|void|auto|while|if|else|for|return|vector|cout|cin|endl)\b/g,
+        /\b(#include|using|namespace|int|void|auto|while|if|else|for|return|vector|cout|cin|endl)\b/g,
         '<span style="color:#c792ea">$1</span>',
       )
-      .replace(/(".*?")/g, '<span style="color:#c3e88d">$1</span>')
+      .replace(/(&quot;.*?&quot;|&amp;quot;.*?&amp;quot;|".*?")/g, '<span style="color:#c3e88d">$1</span>')
       .replace(/(\/\/.*)/g, '<span style="color:#555">$1</span>')
       .replace(/\b(\d+)\b/g, '<span style="color:#f78c6c">$1</span>')
       .replace(/\b(main|check|stdc|bits|std|size_t)\b/g, '<span style="color:#82aaff">$1</span>');
@@ -180,16 +340,20 @@ function FeatureCard({ icon, title, description, accentColor, index }: FeatureCa
       initial={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : undefined}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="group p-6 rounded-lg transition-all duration-200"
+      className="group p-6 rounded-lg transition-all duration-300"
       style={{
         backgroundColor: 'var(--bg-surface)',
         border: '1px solid var(--border-subtle)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = 'var(--accent)';
+        e.currentTarget.style.borderColor = accentColor;
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = `0 8px 30px ${accentColor}15`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = 'var(--border-subtle)';
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = 'none';
       }}
     >
       <div className="text-2xl mb-3">{icon}</div>
@@ -283,10 +447,13 @@ export default function Home() {
       className="min-h-screen"
       style={{ backgroundColor: 'var(--bg-primary)', overflow: 'hidden' }}
     >
+      {/* Floating Navbar */}
+      <LandingNav />
+
       {/* ── Hero Section ────────────────────────── */}
       <section
         className="relative flex flex-col items-center text-center px-6"
-        style={{ paddingTop: '120px' }}
+        style={{ paddingTop: '140px' }}
       >
         {/* Background glow */}
         <div
@@ -453,12 +620,17 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Nav */}
+            {/* Nav — links point to valid routes */}
             <nav className="flex items-center gap-6">
-              {['Editor', 'Problems', 'Contests', 'Club'].map((item) => (
+              {[
+                { label: 'Editor', href: '/editor' },
+                { label: 'Problems', href: '/club/problems' },
+                { label: 'Contests', href: '/club/contests' },
+                { label: 'Club', href: '/club/dashboard' },
+              ].map((item) => (
                 <Link
-                  key={item}
-                  href={`/${item.toLowerCase()}`}
+                  key={item.href}
+                  href={item.href}
                   className="text-xs transition-colors duration-150"
                   style={{
                     fontFamily: "'Space Mono', monospace",
@@ -471,7 +643,7 @@ export default function Home() {
                     e.currentTarget.style.color = 'var(--text-muted)';
                   }}
                 >
-                  {item.toUpperCase()}
+                  {item.label.toUpperCase()}
                 </Link>
               ))}
             </nav>
@@ -488,7 +660,7 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Bottom bar */}
+          {/* Bottom bar — dynamic copyright year */}
           <div
             className="text-center mt-8 pt-6"
             style={{ borderTop: '1px solid var(--border-subtle)' }}
@@ -500,7 +672,7 @@ export default function Home() {
                 color: 'var(--text-muted)',
               }}
             >
-              © 2025 Forge IDE · MIT License
+              © {new Date().getFullYear()} Forge IDE · MIT License
             </p>
           </div>
         </div>

@@ -54,7 +54,7 @@ export function ProblemSidebar() {
 
   const activeProblemId = (params?.problemId as string) || currentProblem?.id;
 
-  // Fetch problems
+  // Fetch problems & solved ids
   useEffect(() => {
     const fetchProblems = async () => {
       setIsLoading(true);
@@ -68,8 +68,27 @@ export function ProblemSidebar() {
         setIsLoading(false);
       }
     };
+
+    const fetchSolvedIds = async () => {
+      if (!user) return;
+      try {
+        const res = await api.get('/api/submissions?verdict=ACCEPTED');
+        const ids = new Set<string>();
+        // Check if data is array or object with submissions array
+        const data = res.data;
+        const subs = Array.isArray(data) ? data : (data.submissions || []);
+        subs.forEach((s: any) => {
+          if (s.problemId) ids.add(s.problemId);
+        });
+        setSolvedIds(ids);
+      } catch {
+        // Ignore
+      }
+    };
+
     fetchProblems();
-  }, []);
+    fetchSolvedIds();
+  }, [user]);
 
   // Filter problems by search
   const filtered = problems.filter(
@@ -238,6 +257,7 @@ export function ProblemSidebar() {
       {user?.role === 'ADMIN' && (
         <div className="p-2 shrink-0" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <button
+            onClick={() => router.push('/admin/problems/add')}
             className="w-full py-1.5 rounded text-[10px] font-bold tracking-wider transition-all duration-200"
             style={{
               fontFamily: "'Space Mono', monospace",
