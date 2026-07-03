@@ -8,9 +8,11 @@ const request = supertest(app);
 
 // ── Helpers ──────────────────────────────────────
 
+const suffix = () => Math.random().toString(36).slice(2, 8);
+
 const testUser = {
-  username: `testuser_${Date.now()}`,
-  email: `test_${Date.now()}@forge.dev`,
+  username: `tu_${suffix()}`,
+  email: `test_${Date.now()}_${suffix()}@forge.dev`,
   password: 'TestPass1234',
 };
 
@@ -29,8 +31,8 @@ describe('POST /api/auth/register', () => {
 
   it('returns access token on register', async () => {
     const uniqueUser = {
-      username: `tokenuser_${Date.now()}`,
-      email: `tokenuser_${Date.now()}@forge.dev`,
+      username: `tok_${suffix()}`,
+      email: `token_${Date.now()}_${suffix()}@forge.dev`,
       password: 'TestPass1234',
     };
     const res = await request.post('/api/auth/register').send(uniqueUser);
@@ -41,7 +43,7 @@ describe('POST /api/auth/register', () => {
 
   it('rejects duplicate email', async () => {
     const res = await request.post('/api/auth/register').send({
-      username: `other_${Date.now()}`,
+      username: `oth_${suffix()}`,
       email: testUser.email,
       password: 'TestPass1234',
     });
@@ -71,7 +73,7 @@ describe('POST /api/auth/register', () => {
 
   it('rejects invalid email format', async () => {
     const res = await request.post('/api/auth/register').send({
-      username: `bademail_${Date.now()}`,
+      username: `bad_${suffix()}`,
       email: 'not-an-email',
       password: 'TestPass1234',
     });

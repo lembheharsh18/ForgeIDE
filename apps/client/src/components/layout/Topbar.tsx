@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 
+import type { Language } from '../../config/languages';
 import { LANGUAGES, LANGUAGE_KEYS } from '../../config/languages';
 import { useCodeExecution } from '../../hooks/useCodeExecution';
 import api from '../../lib/axios';
@@ -35,7 +36,7 @@ export function Topbar() {
   } = useEditorStore();
   const { execute } = useCodeExecution();
 
-  const isEditorRoute = pathname?.startsWith('/editor');
+  const isEditorRoute = pathname?.startsWith('/ide');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCFSettings, setShowCFSettings] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -79,9 +80,10 @@ export function Topbar() {
   };
 
   const navItems = [
-    { label: 'EDITOR', href: '/editor' },
-    { label: 'PROBLEMS', href: '/problems' },
+    { label: 'IDE', href: '/ide' },
+    { label: 'PROBLEMS', href: '/club/problems' },
     { label: 'CONTESTS', href: '/contests' },
+    { label: 'LEADERBOARD', href: '/leaderboard' },
     { label: 'CLUB', href: '/club' },
   ];
 
@@ -163,41 +165,40 @@ export function Topbar() {
         )}
       </div>
 
-      {/* ── Center: Language Tabs (editor route only) ── */}
+      {/* ── Center: Language Selector (editor route only) ── */}
       {isEditorRoute && (
-        <div className="flex items-center gap-1">
-          {LANGUAGE_KEYS.map((lang) => {
-            const isActive = language === lang;
-            return (
-              <button
-                key={lang}
-                aria-label={`Switch to ${LANGUAGES[lang].display}`}
-                onClick={() => setLanguage(lang)}
-                className="px-3 py-1 rounded text-xs transition-all duration-200"
-                style={{
-                  fontFamily: "'Space Mono', monospace",
-                  border: `1px solid ${isActive ? 'var(--accent)' : 'var(--border-default)'}`,
-                  backgroundColor: isActive ? 'var(--accent)' : 'transparent',
-                  color: isActive ? '#0a0a0a' : 'var(--text-muted)',
-                  fontWeight: isActive ? 700 : 400,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.borderColor = 'var(--accent)';
-                    e.currentTarget.style.color = 'var(--text-primary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.borderColor = 'var(--border-default)';
-                    e.currentTarget.style.color = 'var(--text-muted)';
-                  }
-                }}
-              >
+        <div className="relative">
+          <select
+            aria-label="Select editor language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            className="appearance-none rounded text-xs transition-all duration-200"
+            style={{
+              height: '32px',
+              minWidth: '132px',
+              padding: '0 30px 0 12px',
+              fontFamily: "'Space Mono', monospace",
+              border: '1px solid var(--accent)',
+              backgroundColor: 'var(--accent)',
+              color: '#0a0a0a',
+              fontWeight: 700,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {LANGUAGE_KEYS.map((lang) => (
+              <option key={lang} value={lang}>
                 {LANGUAGES[lang].display}
-              </button>
-            );
-          })}
+              </option>
+            ))}
+          </select>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px]"
+            style={{ color: '#0a0a0a' }}
+          >
+            ▼
+          </span>
         </div>
       )}
 

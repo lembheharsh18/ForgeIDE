@@ -8,6 +8,7 @@ import { RATE_LIMIT } from '../config/constants';
 export const generalLimiter = rateLimit({
   windowMs: RATE_LIMIT.general.windowMs,
   max: RATE_LIMIT.general.max,
+  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -22,6 +23,7 @@ export const generalLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: RATE_LIMIT.auth.windowMs,
   max: RATE_LIMIT.auth.max,
+  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -36,6 +38,7 @@ export const authLimiter = rateLimit({
 export const executeLimiter = rateLimit({
   windowMs: RATE_LIMIT.execute.windowMs,
   max: RATE_LIMIT.execute.max,
+  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {

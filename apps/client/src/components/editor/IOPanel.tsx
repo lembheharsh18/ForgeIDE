@@ -330,7 +330,11 @@ export function IOPanel() {
                       color: 'var(--text-primary)',
                     }}
                   >
-                    {isRunning ? '—' : (executionMemoryKb ? Math.round(executionMemoryKb / 1024) : '0')}
+                    {isRunning
+                      ? '—'
+                      : executionMemoryKb
+                        ? Math.round(executionMemoryKb / 1024)
+                        : '0'}
                     <span
                       className="text-xs font-normal ml-0.5"
                       style={{ color: 'var(--text-muted)' }}

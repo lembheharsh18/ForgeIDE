@@ -35,16 +35,15 @@ function LandingNav() {
       transition={{ duration: 0.4 }}
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={{
-        backgroundColor: scrolled
-          ? 'rgba(10, 10, 10, 0.85)'
-          : 'transparent',
+        backgroundColor: scrolled ? 'rgba(10, 10, 10, 0.85)' : 'transparent',
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
-        borderBottom: scrolled
-          ? '1px solid var(--border-subtle)'
-          : '1px solid transparent',
+        borderBottom: scrolled ? '1px solid var(--border-subtle)' : '1px solid transparent',
       }}
     >
-      <div className="max-w-6xl mx-auto flex items-center justify-between px-6" style={{ height: '56px' }}>
+      <div
+        className="max-w-6xl mx-auto flex items-center justify-between px-6"
+        style={{ height: '56px' }}
+      >
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group" aria-label="Forge IDE Home">
           <div className="relative">
@@ -71,8 +70,8 @@ function LandingNav() {
         <div className="flex items-center gap-4">
           <nav className="hidden md:flex items-center gap-4">
             {[
-              { label: 'EDITOR', href: '/editor' },
-              { label: 'CLUB', href: '/club/dashboard' },
+              { label: 'IDE', href: '/ide' },
+              { label: 'CLUB', href: '/club' },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -222,10 +221,7 @@ function TypingCodeBlock() {
   // Basic syntax highlighting — HTML-escape first to prevent XSS / broken rendering
   const highlightCode = useCallback((code: string) => {
     // 1. Escape HTML entities FIRST
-    let escaped = code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     // 2. Apply syntax highlighting on safe text
     return escaped
@@ -233,7 +229,10 @@ function TypingCodeBlock() {
         /\b(#include|using|namespace|int|void|auto|while|if|else|for|return|vector|cout|cin|endl)\b/g,
         '<span style="color:#c792ea">$1</span>',
       )
-      .replace(/(&quot;.*?&quot;|&amp;quot;.*?&amp;quot;|".*?")/g, '<span style="color:#c3e88d">$1</span>')
+      .replace(
+        /(&quot;.*?&quot;|&amp;quot;.*?&amp;quot;|".*?")/g,
+        '<span style="color:#c3e88d">$1</span>',
+      )
       .replace(/(\/\/.*)/g, '<span style="color:#555">$1</span>')
       .replace(/\b(\d+)\b/g, '<span style="color:#f78c6c">$1</span>')
       .replace(/\b(main|check|stdc|bits|std|size_t)\b/g, '<span style="color:#82aaff">$1</span>');
@@ -433,7 +432,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/editor');
+      router.replace('/club');
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -529,7 +528,7 @@ export default function Home() {
           className="flex flex-wrap gap-3 justify-center mt-12"
         >
           <Link
-            href="/editor"
+            href="/ide"
             className="px-8 py-3 rounded font-bold text-sm tracking-wider transition-all duration-200"
             style={{
               fontFamily: "'Space Mono', monospace",
@@ -623,10 +622,10 @@ export default function Home() {
             {/* Nav — links point to valid routes */}
             <nav className="flex items-center gap-6">
               {[
-                { label: 'Editor', href: '/editor' },
+                { label: 'IDE', href: '/ide' },
                 { label: 'Problems', href: '/club/problems' },
-                { label: 'Contests', href: '/club/contests' },
-                { label: 'Club', href: '/club/dashboard' },
+                { label: 'Contests', href: '/contests' },
+                { label: 'Club', href: '/club' },
               ].map((item) => (
                 <Link
                   key={item.href}

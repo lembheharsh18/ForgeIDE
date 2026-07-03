@@ -104,7 +104,7 @@ export default function ProblemsPage() {
       header: 'Title',
       render: (p: Problem) => (
         <Link
-          href={`/editor?problem=${p.id}`}
+          href={`/ide?problem=${p.id}`}
           className="font-bold text-text-primary hover:text-accent transition-colors"
         >
           {p.title}
@@ -162,7 +162,7 @@ export default function ProblemsPage() {
       render: (p: Problem) => (
         <div className="flex items-center gap-3">
           <Link
-            href={`/editor?problem=${p.id}`}
+            href={`/ide?problem=${p.id}`}
             className="text-[10px] font-mono font-bold tracking-wider text-bg-primary bg-accent px-3 py-1 rounded hover:bg-[#fbbf24] transition-colors"
           >
             ▶ SOLVE

@@ -75,6 +75,8 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://server:4000
       NEXT_PUBLIC_WS_URL: ws://server:4000
+      NODE_ENV: production
+      PORT: 3000
     volumes:
       - ./apps/client/src:/app/apps/client/src
       - ./packages/shared:/app/packages/shared

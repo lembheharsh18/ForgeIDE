@@ -3,6 +3,73 @@
 import { prisma } from '../config/db';
 import { redis } from '../config/redis';
 
+export interface LeaderboardListEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  codeforcesHandle: string | null;
+  score: number;
+  solvedCount: number;
+  updatedAt: Date;
+}
+
+export type LeaderboardSortKey = 'rank' | 'rating' | 'solved';
+export type LeaderboardPlatformFilter = 'ALL' | 'CODEFORCES' | 'LEETCODE' | 'CODECHEF' | 'GFG';
+
+export interface LeaderboardQueryOptions {
+  limit?: number;
+  sort?: LeaderboardSortKey;
+  platform?: LeaderboardPlatformFilter;
+}
+
+export async function getLeaderboardEntries(
+  options: LeaderboardQueryOptions = {},
+): Promise<LeaderboardListEntry[]> {
+  const { limit, sort = 'rating', platform = 'ALL' } = options;
+  const orderBy =
+    sort === 'solved'
+      ? [{ solvedCount: 'desc' as const }, { score: 'desc' as const }]
+      : sort === 'rank'
+        ? [{ rank: 'asc' as const }, { score: 'desc' as const }]
+        : [{ score: 'desc' as const }, { solvedCount: 'desc' as const }];
+
+  const entries = await prisma.leaderboardEntry.findMany({
+    orderBy,
+    where:
+      platform === 'CODEFORCES'
+        ? {
+            user: {
+              codeforcesHandle: { not: null },
+            },
+          }
+        : undefined,
+    ...(limit ? { take: limit } : {}),
+    include: {
+      user: {
+        select: {
+          username: true,
+          avatarUrl: true,
+          codeforcesHandle: true,
+        },
+      },
+    },
+  });
+
+  const filteredEntries = platform === 'ALL' || platform === 'CODEFORCES' ? entries : [];
+
+  return filteredEntries.map((entry: (typeof filteredEntries)[number], index: number) => ({
+    rank: index + 1,
+    userId: entry.userId,
+    username: entry.user.username,
+    avatarUrl: entry.user.avatarUrl,
+    codeforcesHandle: entry.user.codeforcesHandle,
+    score: entry.score,
+    solvedCount: entry.solvedCount,
+    updatedAt: entry.updatedAt,
+  }));
+}
+
 // ── Score Calculation ────────────────────────────
 
 function calculateProblemScore(platform: string, difficulty: string): number {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import type { Language } from '../config/languages';
-import { LANGUAGES } from '../config/languages';
+import { LANGUAGES, LANGUAGE_KEYS } from '../config/languages';
 
 // ── Types ────────────────────────────────────────
 
@@ -41,6 +41,14 @@ export interface Problem {
   cfIndex?: string | null;
   testCases?: Array<{ input: string; output: string }> | null;
   addedById: string;
+}
+
+function isLanguage(value: string | null): value is Language {
+  return LANGUAGE_KEYS.includes(value as Language);
+}
+
+function codeStorageKey(problemId: string | undefined, language: Language) {
+  return `forge_code_${problemId ?? 'scratch'}_${language}`;
 }
 
 interface EditorState {
@@ -107,44 +115,40 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
 
   hydrate: () => {
     if (typeof window === 'undefined' || get()._hydrated) return;
-    const storedTheme =
-      (localStorage.getItem('forge_theme') as 'dark' | 'light') || 'dark';
-    const storedLang =
-      (localStorage.getItem('forge_language') as Language) || 'cpp';
-    document.documentElement.setAttribute(
-      'data-theme',
-      storedTheme === 'light' ? 'light' : '',
-    );
+    const storedTheme = (localStorage.getItem('forge_theme') as 'dark' | 'light') || 'dark';
+    const storedLanguage = localStorage.getItem('forge_language');
+    const storedLang = isLanguage(storedLanguage) ? storedLanguage : 'cpp';
+    const savedCode = localStorage.getItem(codeStorageKey(get().currentProblem?.id, storedLang));
+    document.documentElement.setAttribute('data-theme', storedTheme === 'light' ? 'light' : '');
     set({
       theme: storedTheme,
       language: storedLang,
-      code: LANGUAGES[storedLang].boilerplate,
+      code: savedCode ?? LANGUAGES[storedLang].boilerplate,
       _hydrated: true,
     });
   },
 
   setLanguage: (language) => {
+    const { code, language: prevLang, currentProblem } = get();
+    let nextCode = LANGUAGES[language].boilerplate;
+
     if (typeof window !== 'undefined') {
-      // Save current code for current language before switching
-      const { code, language: prevLang, currentProblem } = get();
-      const prevKey = `forge_code_${currentProblem?.id ?? 'scratch'}_${prevLang}`;
       try {
-        localStorage.setItem(prevKey, code);
+        localStorage.setItem(codeStorageKey(currentProblem?.id, prevLang), code);
       } catch {
         // localStorage full — ignore
       }
+      const savedCode = localStorage.getItem(codeStorageKey(currentProblem?.id, language));
+      nextCode = savedCode ?? LANGUAGES[language].boilerplate;
       localStorage.setItem('forge_language', language);
     }
-    set({ language });
+    set({ language, code: nextCode });
   },
 
   setTheme: (theme) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('forge_theme', theme);
-      document.documentElement.setAttribute(
-        'data-theme',
-        theme === 'light' ? 'light' : '',
-      );
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
     }
     set({ theme });
   },

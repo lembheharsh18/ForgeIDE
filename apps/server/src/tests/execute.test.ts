@@ -114,7 +114,7 @@ describe('POST /api/execute', () => {
     // In CI with no Piston, this may 500. Check structure.
     expect([200, 500]).toContain(res.status);
     if (res.status === 200) {
-      expect(res.body.run).toBeDefined();
+      expect(res.body.stdout).toBeDefined();
       expect(res.body.verdict).toBeDefined();
     }
   });

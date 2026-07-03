@@ -91,7 +91,7 @@ describe('scrapeCFProblem', () => {
     }) as jest.Mock;
 
     const result = await scrapeCFProblem('1', 'A');
-    expect(result.timeLimit).toBe(1);
+    expect(result.timeLimit).toBe(1000);
   });
 
   it('extracts memory limit', async () => {

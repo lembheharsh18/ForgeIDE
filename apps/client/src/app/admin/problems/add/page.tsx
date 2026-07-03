@@ -32,7 +32,7 @@ export default function AddProblemPage() {
 
   // Redirect non-admins
   if (user && user.role !== 'ADMIN') {
-    router.replace('/club/dashboard');
+    router.replace('/club');
     return null;
   }
 

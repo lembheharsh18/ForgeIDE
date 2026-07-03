@@ -122,13 +122,13 @@ export default function NotFound() {
           >
             <p>error: unresolved reference to &apos;/&apos; at line 404</p>
             <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
-              note: did you mean &apos;/editor&apos;?
+              note: did you mean &apos;/ide&apos;?
             </p>
           </div>
 
           {/* CTA */}
           <Link
-            href="/editor"
+            href="/ide"
             className="mt-8 px-6 py-2.5 rounded text-sm tracking-wider transition-all duration-200"
             style={{
               fontFamily: "'Space Mono', monospace",

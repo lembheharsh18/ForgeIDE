@@ -427,31 +427,16 @@ export function CodeEditor({
     const view = viewRef.current;
     if (!view || language === prevLanguageRef.current) return;
 
-    const prevLang = prevLanguageRef.current;
     prevLanguageRef.current = language;
 
     // Fade out
     setEditorOpacity(0);
 
     setTimeout(() => {
-      // Check if current code is previous boilerplate or empty
-      const currentCode = view.state.doc.toString();
-      const prevBoilerplate = LANGUAGES[prevLang].boilerplate;
-      const isBoilerplateOrEmpty =
-        !currentCode.trim() || currentCode.trim() === prevBoilerplate.trim();
-
       // Try to restore saved code for this language
       const storageKey = `forge_code_${problemId ?? 'scratch'}_${language}`;
       const savedCode = localStorage.getItem(storageKey);
-
-      let newCode: string;
-      if (savedCode) {
-        newCode = savedCode;
-      } else if (isBoilerplateOrEmpty) {
-        newCode = LANGUAGES[language].boilerplate;
-      } else {
-        newCode = currentCode;
-      }
+      const newCode = savedCode ?? LANGUAGES[language].boilerplate;
 
       // Update language extension
       view.dispatch({

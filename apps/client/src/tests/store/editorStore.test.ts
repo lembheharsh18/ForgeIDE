@@ -1,9 +1,11 @@
 // ── Editor Store Tests ───────────────────────────
 
+import { LANGUAGES } from '../../config/languages';
 import { useEditorStore } from '../../store/editorStore';
 
 // Reset store between tests
 beforeEach(() => {
+  localStorage.clear();
   useEditorStore.setState({
     language: 'cpp',
     theme: 'dark',
@@ -19,6 +21,9 @@ beforeEach(() => {
     currentProblem: null,
     rcMode: false,
     fontSize: 13,
+    executionTimeMs: null,
+    executionMemoryKb: null,
+    _hydrated: false,
   });
 });
 
@@ -36,6 +41,24 @@ describe('editorStore', () => {
   it('setLanguage updates language', () => {
     useEditorStore.getState().setLanguage('python');
     expect(useEditorStore.getState().language).toBe('python');
+  });
+
+  it('setLanguage loads the selected language boilerplate when no saved code exists', () => {
+    useEditorStore.setState({ language: 'cpp', code: 'int main() { return 0; }' });
+
+    useEditorStore.getState().setLanguage('python');
+
+    expect(useEditorStore.getState().language).toBe('python');
+    expect(useEditorStore.getState().code).toBe(LANGUAGES.python.boilerplate);
+    expect(localStorage.getItem('forge_code_scratch_cpp')).toBe('int main() { return 0; }');
+  });
+
+  it('setLanguage restores saved code for the selected language', () => {
+    localStorage.setItem('forge_code_scratch_python', 'print("saved")');
+
+    useEditorStore.getState().setLanguage('python');
+
+    expect(useEditorStore.getState().code).toBe('print("saved")');
   });
 
   it('setTheme updates theme', () => {

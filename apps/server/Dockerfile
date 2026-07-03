@@ -2,6 +2,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 # Copy all package.json and package-lock.json files
 COPY package.json package-lock.json* ./
 COPY apps/client/package.json ./apps/client/
@@ -15,7 +17,7 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Generate Prisma client
-RUN npx prisma generate
+RUN npx prisma generate --schema=apps/server/prisma/schema.prisma
 
 # Build the server application
 RUN npm run build -w apps/server
@@ -26,10 +28,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app/dist ./dist
+RUN apk add --no-cache openssl
+
+COPY --from=builder /app/apps/server/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/apps/server/prisma ./prisma
 
 EXPOSE 4000
 

@@ -76,7 +76,7 @@ export function ProblemSidebar() {
         const ids = new Set<string>();
         // Check if data is array or object with submissions array
         const data = res.data;
-        const subs = Array.isArray(data) ? data : (data.submissions || []);
+        const subs = Array.isArray(data) ? data : data.submissions || [];
         subs.forEach((s: any) => {
           if (s.problemId) ids.add(s.problemId);
         });
@@ -99,7 +99,7 @@ export function ProblemSidebar() {
 
   const handleSelectProblem = (problem: Problem) => {
     setCurrentProblem(problem);
-    router.push(`/editor/${problem.id}`);
+    router.push(`/ide/${problem.id}`);
   };
 
   return (

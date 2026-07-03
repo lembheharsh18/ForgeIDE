@@ -89,7 +89,7 @@ describe('LoginForm', () => {
         email: 'test@example.com',
         password: 'TestPass123',
       });
-      expect(mockPush).toHaveBeenCalledWith('/editor');
+      expect(mockPush).toHaveBeenCalledWith('/club');
     });
   });
 

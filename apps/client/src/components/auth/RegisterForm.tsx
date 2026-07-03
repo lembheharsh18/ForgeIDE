@@ -67,7 +67,7 @@ export function RegisterForm() {
         password: data.password,
       });
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/editor');
+      router.push('/club');
     } catch (err: any) {
       setServerError(err.response?.data?.message || 'Registration failed. Please try again.');
     }

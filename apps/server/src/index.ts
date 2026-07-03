@@ -11,6 +11,7 @@ import morgan from 'morgan';
 import { generalLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
 import cfRoutes from './routes/cf';
+import clubRoutes from './routes/club';
 import contestsRoutes from './routes/contests';
 import executeRoutes from './routes/execute';
 import leaderboardRoutes from './routes/leaderboard';
@@ -76,6 +77,7 @@ app.get('/health', async (_req, res) => {
 // ── Routes ───────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/cf', cfRoutes);
+app.use('/api/club', clubRoutes);
 app.use('/api/execute', executeRoutes);
 app.use('/api/problems', problemsRoutes);
 app.use('/api/contests', contestsRoutes);
@@ -95,11 +97,13 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // ── Start Server ─────────────────────────────────
 const PORT = process.env.PORT || 4000;
 
-httpServer.listen(PORT, () => {
-  console.warn(`\n⚡ Forge IDE Server running on port ${PORT}`);
-  console.warn(`   Health: http://localhost:${PORT}/health`);
-  console.warn(`   Auth:   http://localhost:${PORT}/api/auth`);
-  console.warn(`   RC WS:  ws://localhost:${PORT}/rc\n`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, () => {
+    console.warn(`\n⚡ Forge IDE Server running on port ${PORT}`);
+    console.warn(`   Health: http://localhost:${PORT}/health`);
+    console.warn(`   Auth:   http://localhost:${PORT}/api/auth`);
+    console.warn(`   RC WS:  ws://localhost:${PORT}/rc\n`);
+  });
+}
 
 export { app, httpServer, io };

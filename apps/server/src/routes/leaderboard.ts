@@ -4,14 +4,31 @@ import { Router, type Request, type Response } from 'express';
 
 import { prisma } from '../config/db';
 import { redis } from '../config/redis';
+import {
+  getLeaderboardEntries,
+  type LeaderboardPlatformFilter,
+  type LeaderboardSortKey,
+} from '../services/leaderboard';
 
 const router = Router();
 
 // ── GET /api/leaderboard ─────────────────────────
 
-router.get('/', async (_req: Request, res: Response) => {
+const VALID_SORTS = new Set(['rank', 'rating', 'solved']);
+const VALID_PLATFORMS = new Set(['ALL', 'CODEFORCES', 'LEETCODE', 'CODECHEF', 'GFG']);
+
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const cacheKey = 'leaderboard:full';
+    const sort = VALID_SORTS.has(String(req.query.sort))
+      ? (String(req.query.sort) as LeaderboardSortKey)
+      : 'rating';
+    const platform = VALID_PLATFORMS.has(String(req.query.platform))
+      ? (String(req.query.platform) as LeaderboardPlatformFilter)
+      : 'ALL';
+    const limit = req.query.limit
+      ? Math.min(Math.max(parseInt(String(req.query.limit), 10) || 0, 1), 100)
+      : undefined;
+    const cacheKey = `leaderboard:full:${sort}:${platform}:${limit ?? 'all'}`;
 
     // Check Redis cache first
     try {
@@ -24,30 +41,17 @@ router.get('/', async (_req: Request, res: Response) => {
       // Redis unavailable
     }
 
-    // Fetch from DB
-    const entries = await prisma.leaderboardEntry.findMany({
-      orderBy: { score: 'desc' },
-      include: {
-        user: {
-          select: {
-            username: true,
-            avatarUrl: true,
-            codeforcesHandle: true,
-          },
-        },
-      },
-    });
-
-    const leaderboard = entries.map((entry: (typeof entries)[number], index: number) => ({
-      rank: index + 1,
-      userId: entry.userId,
-      username: entry.user.username,
-      avatarUrl: entry.user.avatarUrl,
-      codeforcesHandle: entry.user.codeforcesHandle,
-      score: entry.score,
-      solvedCount: entry.solvedCount,
-      updatedAt: entry.updatedAt,
-    }));
+    const leaderboard = await getLeaderboardEntries({ sort, platform, limit });
+    const responsePayload = {
+      source: 'LOCAL_LEADERBOARD_FALLBACK',
+      message:
+        platform === 'ALL' || platform === 'CODEFORCES'
+          ? 'Using the existing Forge leaderboard until PlatformProfileSnapshot aggregation is built.'
+          : `No ${platform} snapshots are available yet; PlatformProfileSnapshot integration is not built.`,
+      sort,
+      platform,
+      entries: leaderboard,
+    };
 
     // Update ranks in DB in background
     const updates = leaderboard.map((entry: (typeof leaderboard)[number]) =>
@@ -62,12 +66,12 @@ router.get('/', async (_req: Request, res: Response) => {
 
     // Cache in Redis for 60 seconds
     try {
-      await redis.setex(cacheKey, 60, JSON.stringify(leaderboard));
+      await redis.setex(cacheKey, 60, JSON.stringify(responsePayload));
     } catch {
       // Redis unavailable
     }
 
-    res.json(leaderboard);
+    res.json(responsePayload);
   } catch (err) {
     console.error('[Leaderboard] Get error:', err);
     res.status(500).json({ error: 'Failed to fetch leaderboard' });

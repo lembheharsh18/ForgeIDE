@@ -26,7 +26,7 @@ export default function AddContestPage() {
 
   // Redirect non-admins
   if (user && user.role !== 'ADMIN') {
-    router.replace('/club/dashboard');
+    router.replace('/club');
     return null;
   }
 
@@ -43,7 +43,7 @@ export default function AddContestPage() {
 
       await api.post('/api/contests', payload);
       alert('Contest added successfully!');
-      router.push('/club/contests');
+      router.push('/contests');
     } catch (err) {
       console.error('Add contest failed', err);
       alert('Failed to add contest. Check console for details.');

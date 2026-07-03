@@ -69,7 +69,11 @@ export function StatusBar() {
           className="hidden sm:inline-block pl-2"
           style={{ borderLeft: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}
         >
-          Press <kbd style={{ padding: '0 4px', background: 'var(--bg-elevated)', borderRadius: '2px' }}>Ctrl+Enter</kbd> to Run
+          Press{' '}
+          <kbd style={{ padding: '0 4px', background: 'var(--bg-elevated)', borderRadius: '2px' }}>
+            Ctrl+Enter
+          </kbd>{' '}
+          to Run
         </span>
       </div>
 

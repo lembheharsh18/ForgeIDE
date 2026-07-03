@@ -45,7 +45,7 @@ export function LoginForm() {
     try {
       const res = await api.post('/api/auth/login', data);
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/editor');
+      router.push('/club');
     } catch (err: any) {
       setServerError(err.response?.data?.message || 'Login failed. Please try again.');
     }

@@ -308,7 +308,7 @@ export default function ProfilePage() {
                 {profile.solvedProblems.map((p) => (
                   <Link
                     key={p.id}
-                    href={`/editor?problem=${p.id}`}
+                    href={`/ide?problem=${p.id}`}
                     className="bg-bg-surface border border-border-default rounded-lg p-4 hover:border-border-subtle transition-colors flex flex-col gap-2"
                   >
                     <span className="font-bold text-sm text-text-primary truncate">{p.title}</span>
