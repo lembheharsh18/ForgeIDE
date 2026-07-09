@@ -11,13 +11,16 @@ import morgan from 'morgan';
 import { generalLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
 import cfRoutes from './routes/cf';
+import chatRoutes from './routes/chat';
 import clubRoutes from './routes/club';
-import contestsRoutes from './routes/contests';
+import contestRoutes from './routes/contests';
 import executeRoutes from './routes/execute';
 import leaderboardRoutes from './routes/leaderboard';
-import problemsRoutes from './routes/problems';
-import submissionsRoutes from './routes/submissions';
-import usersRoutes from './routes/users';
+import problemRoutes from './routes/problems';
+import reverseCodeRoutes from './routes/reverseCode';
+import submissionRoutes from './routes/submissions';
+import userRoutes from './routes/users';
+import dailyProblemsRoutes from './routes/dailyProblems';
 import { initSocketServer } from './sockets';
 
 dotenv.config({ path: '../../.env' });
@@ -74,16 +77,19 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-// ── Routes ───────────────────────────────────────
+// ── ROUTES ───────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/cf', cfRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api/club', clubRoutes);
+app.use('/api/problems', problemRoutes);
 app.use('/api/execute', executeRoutes);
-app.use('/api/problems', problemsRoutes);
-app.use('/api/contests', contestsRoutes);
+app.use('/api/submissions', submissionRoutes);
+app.use('/api/contests', contestRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
-app.use('/api/submissions', submissionsRoutes);
-app.use('/api/users', usersRoutes);
+app.use('/api/reverse-code', reverseCodeRoutes);
+app.use('/api/daily-problems', dailyProblemsRoutes);
 
 // ── Global Error Handler ─────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

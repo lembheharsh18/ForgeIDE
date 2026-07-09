@@ -7,6 +7,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 import { useAuthStore } from '../store/authStore';
 import { useEditorStore } from '../store/editorStore';
+import { DailyProblemCard } from '../components/home/DailyProblemCard';
+import api from '../lib/axios';
 
 // ── Floating Navbar ──────────────────────────────
 
@@ -429,6 +431,27 @@ export default function Home() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthStore();
   const prefersReducedMotion = useReducedMotion();
+  
+  const [topUsers, setTopUsers] = useState<any[]>([]);
+  const [dailyProblems, setDailyProblems] = useState<any[]>([]);
+  const [loadingDaily, setLoadingDaily] = useState(true);
+
+  useEffect(() => {
+    // Fetch leaderboard
+    api.get('/api/leaderboard?sort=rating&platform=ALL')
+      .then(res => {
+        if (res.data?.entries) setTopUsers(res.data.entries.slice(0, 3));
+      })
+      .catch(() => {});
+      
+    // Fetch daily problems
+    api.get('/api/daily-problems')
+      .then(res => {
+        if (res.data?.success) setDailyProblems(res.data.data);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDaily(false));
+  }, []);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -578,6 +601,32 @@ export default function Home() {
         </motion.div>
       </section>
 
+      {/* ── Daily Problems Widget ────────────────────── */}
+      <section className="max-w-4xl mx-auto px-6" style={{ marginTop: '120px' }}>
+        <motion.h2
+          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.4 }}
+          className="text-2xl font-bold text-center mb-8 tracking-wider"
+          style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
+        >
+          PROBLEM OF THE DAY
+        </motion.h2>
+
+        {loadingDaily ? (
+          <div className="flex justify-center">
+            <div className="animate-pulse h-32 bg-bg-surface border border-border-subtle rounded-lg w-full max-w-2xl" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            {dailyProblems.map((problem, i) => (
+              <DailyProblemCard key={problem.platform} problem={problem} index={i} />
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* ── Features Grid ───────────────────────── */}
       <section className="max-w-5xl mx-auto px-6" style={{ marginTop: '120px' }}>
         <motion.h2
@@ -595,6 +644,62 @@ export default function Home() {
           {FEATURES.map((feature, i) => (
             <FeatureCard key={feature.title} {...feature} index={i} />
           ))}
+        </div>
+      </section>
+
+      {/* ── Leaderboard Preview ────────────────────── */}
+      <section className="max-w-4xl mx-auto px-6" style={{ marginTop: '120px' }}>
+        <motion.h2
+          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.4 }}
+          className="text-2xl font-bold text-center mb-12 tracking-wider"
+          style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
+        >
+          TOP CODERS
+        </motion.h2>
+
+        <div className="flex flex-col gap-4">
+          {topUsers.length === 0 ? (
+            <div className="text-center text-text-muted font-mono italic">Loading leaderboard...</div>
+          ) : (
+            topUsers.map((user, i) => (
+              <motion.div
+                key={user.userId}
+                initial={prefersReducedMotion ? undefined : { opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+                className="flex items-center justify-between p-5 bg-bg-surface border border-border-subtle rounded-lg"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-bold text-[#0a0a0a] font-mono">
+                    #{i + 1}
+                  </div>
+                  <div>
+                    <div className="font-bold font-syne text-lg">{user.username}</div>
+                    <div className="text-xs text-text-muted font-mono mt-1">
+                      {user.solvedCount} problems solved
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold font-mono text-[#39ff8a]">{user.score}</div>
+                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-widest">Rating</div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+        
+        <div className="flex justify-center mt-8">
+          <Link
+            href="/leaderboard"
+            className="px-6 py-2 rounded text-xs font-bold tracking-wider transition-all duration-200 font-mono border border-border-default hover:border-accent hover:text-accent"
+          >
+            VIEW FULL LEADERBOARD
+          </Link>
         </div>
       </section>
 

@@ -7,6 +7,7 @@ import { prisma } from '../config/db';
 import { LANGUAGES, type Language } from '../config/languages';
 import { executeLimiter } from '../middleware/rateLimiter';
 import { requireAuth } from '../middleware/requireAuth';
+import { requireLiveContest } from '../middleware/requireLiveContest';
 import { scrapeCFProblem, CFError } from '../services/cfScraper';
 import { processAcceptedSubmission } from '../services/leaderboard';
 import { executeCode, computeVerdict, compareOutputs } from '../services/piston';
@@ -35,7 +36,7 @@ const COMPILE_TIMEOUT_MS = 10000;
 
 // ── POST /api/execute ────────────────────────────
 
-router.post('/', requireAuth, executeLimiter, async (req: Request, res: Response) => {
+router.post('/', requireAuth, requireLiveContest, executeLimiter, async (req: Request, res: Response) => {
   try {
     const body = executeSchema.parse(req.body);
     const lang = LANGUAGES[body.language];
@@ -123,7 +124,7 @@ router.post('/', requireAuth, executeLimiter, async (req: Request, res: Response
 
 const testResultLimiter = executeLimiter; // Same 10/min limiter
 
-router.post('/run-tests', requireAuth, testResultLimiter, async (req: Request, res: Response) => {
+router.post('/run-tests', requireAuth, requireLiveContest, testResultLimiter, async (req: Request, res: Response) => {
   try {
     const body = runTestsSchema.parse(req.body);
     const lang = LANGUAGES[body.language as Language];

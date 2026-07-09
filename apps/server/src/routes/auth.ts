@@ -274,6 +274,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
         email: true,
         role: true,
         codeforcesHandle: true,
+        codechefHandle: true,
+        leetcodeUsername: true,
         avatarUrl: true,
         createdAt: true,
         updatedAt: true,
@@ -301,6 +303,57 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to fetch user data',
+    });
+  }
+});
+
+// ── PUT /api/auth/profile ────────────────────────
+
+const updateProfileSchema = z.object({
+  codeforcesHandle: z.string().optional().nullable(),
+  codechefHandle: z.string().optional().nullable(),
+  leetcodeUsername: z.string().optional().nullable(),
+});
+
+router.put('/profile', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const validation = updateProfileSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      res.status(400).json({
+        error: 'Validation failed',
+        details: validation.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const { codeforcesHandle, codechefHandle, leetcodeUsername } = validation.data;
+
+    const user = await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: {
+        ...(codeforcesHandle !== undefined && { codeforcesHandle }),
+        ...(codechefHandle !== undefined && { codechefHandle }),
+        ...(leetcodeUsername !== undefined && { leetcodeUsername }),
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        codeforcesHandle: true,
+        codechefHandle: true,
+        leetcodeUsername: true,
+        avatarUrl: true,
+      },
+    });
+
+    res.json({ user });
+  } catch (error) {
+    console.error('[Auth] Profile update error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to update profile',
     });
   }
 });

@@ -55,6 +55,8 @@ const createProblemSchema = z.object({
       }),
     )
     .optional(),
+  referenceSolution: z.string().optional(),
+  referenceLang: z.enum(['cpp', 'python', 'java', 'javascript', 'go']).optional(),
 });
 
 // ── GET /api/problems ────────────────────────────
@@ -221,9 +223,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       res.status(404).json({ error: 'Problem not found' });
       return;
     }
+    
+    // Omit reference solution so clients can't cheat
+    const { referenceSolution, ...safeProblem } = problem;
 
     res.json({
-      ...problem,
+      ...safeProblem,
       solvedCount: problem._count.solvedBy,
       submissionCount: problem._count.submissions,
     });
@@ -277,6 +282,8 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
         outputSpec: cfData.outputSpec ?? body.outputSpec ?? null,
         noteSection: cfData.noteSection ?? body.noteSection ?? null,
         testCases: (cfData.testCases ?? body.testCases ?? null) as unknown as undefined,
+        referenceSolution: body.referenceSolution ?? null,
+        referenceLang: body.referenceLang ?? null,
         addedById: req.user!.userId,
       },
     });
@@ -321,6 +328,8 @@ router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
         ...(body.outputSpec !== undefined && { outputSpec: body.outputSpec }),
         ...(body.noteSection !== undefined && { noteSection: body.noteSection }),
         ...(body.testCases !== undefined && { testCases: body.testCases as unknown as undefined }),
+        ...(body.referenceSolution !== undefined && { referenceSolution: body.referenceSolution }),
+        ...(body.referenceLang !== undefined && { referenceLang: body.referenceLang }),
       },
     });
 

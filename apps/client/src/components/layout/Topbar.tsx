@@ -84,6 +84,7 @@ export function Topbar() {
     { label: 'PROBLEMS', href: '/club/problems' },
     { label: 'CONTESTS', href: '/contests' },
     { label: 'LEADERBOARD', href: '/leaderboard' },
+    { label: 'COMMUNITY', href: '/community' },
     { label: 'CLUB', href: '/club' },
   ];
 

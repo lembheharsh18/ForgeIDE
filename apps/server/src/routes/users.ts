@@ -17,6 +17,8 @@ router.get('/:username', async (req: Request, res: Response) => {
         username: true,
         avatarUrl: true,
         codeforcesHandle: true,
+        codechefHandle: true,
+        leetcodeUsername: true,
         createdAt: true,
         leaderboard: {
           select: {
@@ -97,6 +99,70 @@ router.get('/:username/activity', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[Users] Get activity error:', err);
     res.status(500).json({ error: 'Failed to fetch user activity' });
+  }
+});
+
+// ── GET /api/users/:username/platform-profiles ───
+
+import { fetchAllStats } from '../services/cpStats';
+
+router.get('/:username/platform-profiles', async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username: req.params.username },
+      select: {
+        id: true,
+        codeforcesHandle: true,
+        codechefHandle: true,
+        leetcodeUsername: true,
+        platformProfile: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const CACHE_HOURS = 4;
+    const now = new Date();
+
+    // If cache exists and is fresh, return it
+    if (
+      user.platformProfile &&
+      (now.getTime() - user.platformProfile.updatedAt.getTime()) / (1000 * 60 * 60) < CACHE_HOURS
+    ) {
+      res.json(user.platformProfile);
+      return;
+    }
+
+    // Otherwise, fetch new stats
+    const stats = await fetchAllStats(user.codeforcesHandle, user.leetcodeUsername, user.codechefHandle);
+
+    // Upsert into cache
+    const updatedProfile = await prisma.platformProfileCache.upsert({
+      where: { userId: user.id },
+      update: {
+        cfRating: stats.cfRating,
+        cfRank: stats.cfRank,
+        lcRating: stats.lcRating,
+        ccRating: stats.ccRating,
+        ccStars: stats.ccStars,
+      },
+      create: {
+        userId: user.id,
+        cfRating: stats.cfRating,
+        cfRank: stats.cfRank,
+        lcRating: stats.lcRating,
+        ccRating: stats.ccRating,
+        ccStars: stats.ccStars,
+      },
+    });
+
+    res.json(updatedProfile);
+  } catch (err) {
+    console.error('[Users] Get platform profiles error:', err);
+    res.status(500).json({ error: 'Failed to fetch platform profiles' });
   }
 });
 

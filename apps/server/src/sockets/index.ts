@@ -7,6 +7,7 @@ import { Server as SocketServer } from 'socket.io';
 import { verifyAccessToken } from '../utils/jwt';
 
 import { registerRCHandlers } from './rcInteractor';
+import { initChatNamespace } from './chat';
 
 // ── Initialize Socket.IO ─────────────────────────
 
@@ -58,6 +59,9 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
       console.warn(`[Socket] Client disconnected: ${socket.id}`);
     });
   });
+
+  // ── /chat Namespace ────────────────────────────
+  initChatNamespace(io);
 
   return io;
 }

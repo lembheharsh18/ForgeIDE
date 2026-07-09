@@ -25,6 +25,11 @@ enum Platform {
   CUSTOM
 }
 
+enum ContestType {
+  NORMAL
+  REVERSE_CODING
+}
+
 // ── User ─────────────────────────────────────────
 
 model User {
@@ -34,13 +39,17 @@ model User {
   passwordHash      String?
   role              Role              @default(MEMBER)
   codeforcesHandle  String?
+  codechefHandle    String?
+  leetcodeUsername  String?
   avatarUrl         String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   submissions       Submission[]
   solvedProblems    Problem[]         @relation("SolvedBy")
   leaderboard       LeaderboardEntry?
+  platformProfile   PlatformProfileCache?
   contestParticipations Contest[]     @relation("Participants")
+  chatMessages      ChatMessage[]
 }
 
 // ── Problem ──────────────────────────────────────
@@ -61,10 +70,13 @@ model Problem {
   cfContestId String?
   cfIndex     String?
   testCases   Json?
+  referenceSolution String?  @db.Text
+  referenceLang     String?
   addedById   String
   createdAt   DateTime     @default(now())
   solvedBy    User[]       @relation("SolvedBy")
   submissions Submission[]
+  contests    Contest[]    @relation("ContestProblems")
 }
 
 // ── Submission ───────────────────────────────────
@@ -87,15 +99,17 @@ model Submission {
 // ── Contest ──────────────────────────────────────
 
 model Contest {
-  id           String    @id @default(cuid())
+  id           String      @id @default(cuid())
   name         String
+  type         ContestType @default(NORMAL)
   platform     Platform
   startTime    DateTime
   endTime      DateTime
   link         String
   description  String?
-  participants User[]    @relation("Participants")
-  createdAt    DateTime  @default(now())
+  participants User[]      @relation("Participants")
+  problems     Problem[]   @relation("ContestProblems")
+  createdAt    DateTime    @default(now())
 }
 
 // ── Leaderboard ──────────────────────────────────
@@ -109,3 +123,52 @@ model LeaderboardEntry {
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// ── Reverse Coding ───────────────────────────────
+
+model ReverseQueryLog {
+  id          String   @id @default(cuid())
+  userId      String
+  problemId   String
+  input       String   @db.Text
+  output      String   @db.Text
+  createdAt   DateTime @default(now())
+}
+
+// ── Platform Profiles ────────────────────────────
+
+model PlatformProfileCache {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  cfRating    Int?
+  cfRank      String?
+  lcRating    Int?
+  ccRating    Int?
+  ccStars     Int?
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Chat (Community) ─────────────────────────────
+
+model ChatRoom {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  whiteboardData Json?
+  createdAt   DateTime      @default(now())
+  messages    ChatMessage[]
+}
+
+model ChatMessage {
+  id          String    @id @default(cuid())
+  roomId      String
+  userId      String
+  content     String    @db.Text
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  
+  room        ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

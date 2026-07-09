@@ -61,7 +61,7 @@ interface EditorState {
   verdict: Verdict;
   isRunning: boolean;
   isRunningTests: boolean;
-  activeTab: 'custom' | 'testcases';
+  activeTab: 'custom' | 'testcases' | 'tryinput';
   testResults: TestResult[] | null;
   currentProblem: Problem | null;
   rcMode: boolean;
@@ -81,7 +81,7 @@ interface EditorActions {
   setVerdict: (verdict: Verdict) => void;
   setRunning: (running: boolean) => void;
   setRunningTests: (running: boolean) => void;
-  setActiveTab: (tab: 'custom' | 'testcases') => void;
+  setActiveTab: (tab: 'custom' | 'testcases' | 'tryinput') => void;
   setTestResults: (results: TestResult[] | null) => void;
   setCurrentProblem: (problem: Problem | null) => void;
   toggleRCMode: () => void;

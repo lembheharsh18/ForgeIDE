@@ -13,6 +13,7 @@ const router = Router();
 
 const createContestSchema = z.object({
   name: z.string().min(1).max(200),
+  type: z.enum(['NORMAL', 'REVERSE_CODING']).optional(),
   platform: z.enum(['CODEFORCES', 'ATCODER', 'LEETCODE', 'CUSTOM']),
   startTime: z.string().transform((s) => new Date(s)),
   endTime: z.string().transform((s) => new Date(s)),
@@ -47,6 +48,48 @@ router.get('/', requireAuth, async (_req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/contests/live ───────────────────────
+
+router.get('/live', requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    
+    // Find a contest that is currently running
+    const liveContest = await prisma.contest.findFirst({
+      where: {
+        startTime: { lte: now },
+        endTime: { gt: now },
+      },
+      include: {
+        problems: {
+          select: { id: true, title: true, difficulty: true, platform: true }
+        }
+      }
+    });
+
+    if (liveContest) {
+      res.json({ isLive: true, contest: liveContest });
+      return;
+    }
+
+    // If no live contest, find the next upcoming one
+    const nextContest = await prisma.contest.findFirst({
+      where: {
+        startTime: { gt: now },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
+    res.json({ 
+      isLive: false, 
+      nextContest: nextContest ? { id: nextContest.id, startTime: nextContest.startTime, name: nextContest.name } : null 
+    });
+  } catch (err) {
+    console.error('[Contests] Live check error:', err);
+    res.status(500).json({ error: 'Failed to check live contest' });
+  }
+});
+
 // ── POST /api/contests ───────────────────────────
 
 router.post('/', requireAdmin, async (req: Request, res: Response) => {
@@ -56,6 +99,7 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
     const contest = await prisma.contest.create({
       data: {
         name: body.name,
+        type: body.type || 'NORMAL',
         platform: body.platform,
         startTime: body.startTime,
         endTime: body.endTime,
@@ -91,6 +135,7 @@ router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
       where: { id: req.params.id },
       data: {
         ...(body.name !== undefined && { name: body.name }),
+        ...(body.type !== undefined && { type: body.type }),
         ...(body.platform !== undefined && { platform: body.platform }),
         ...(body.startTime !== undefined && { startTime: body.startTime }),
         ...(body.endTime !== undefined && { endTime: body.endTime }),

@@ -16,6 +16,7 @@ import { Topbar } from '../../components/layout/Topbar';
 import { LANGUAGES } from '../../config/languages';
 import { useCFProblem } from '../../hooks/useCFProblem';
 import { useCodeExecution } from '../../hooks/useCodeExecution';
+import { useLiveContest } from '../../hooks/useLiveContest';
 import api from '../../lib/axios';
 import { useEditorStore } from '../../store/editorStore';
 import type { Problem } from '../../store/editorStore';
@@ -65,6 +66,7 @@ function EditorContent() {
     useEditorStore();
   const { execute } = useCodeExecution();
   const searchParams = useSearchParams();
+  const { isLive, isLoading: isContestLoading, nextContest } = useLiveContest();
 
   // Auto-load CF problem from URL params (?cf=1&problem=A)
   useCFProblem();
@@ -205,6 +207,54 @@ function EditorContent() {
 
         {/* RC Interactor Overlay */}
         <AnimatePresence>{rcMode && <RCInteractor />}</AnimatePresence>
+
+        {/* Contest Gate Overlay */}
+        <AnimatePresence>
+          {(!isLive || isContestLoading) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6"
+              style={{
+                backgroundColor: 'rgba(10, 10, 10, 0.95)',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              {isContestLoading ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full border-2 border-border-subtle" />
+                    <div className="absolute inset-0 w-10 h-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                  </div>
+                  <p className="text-text-muted font-mono text-sm tracking-wider">CHECKING CONTEST STATUS...</p>
+                </div>
+              ) : (
+                <div className="text-center max-w-md">
+                  <div className="text-4xl mb-4">🔒</div>
+                  <h2 className="text-2xl font-bold mb-2 tracking-wider" style={{ fontFamily: 'var(--font-syne)' }}>
+                    NO LIVE CONTEST
+                  </h2>
+                  <p className="text-text-secondary mb-6 font-mono text-sm leading-relaxed">
+                    The Forge IDE is only available during active contests.
+                  </p>
+                  
+                  {nextContest ? (
+                    <div className="p-4 rounded border border-border-default bg-bg-elevated font-mono text-xs">
+                      <p className="text-text-muted mb-1">NEXT CONTEST</p>
+                      <p className="text-accent font-bold mb-1">{nextContest.name}</p>
+                      <p className="text-text-primary">Starts at: {new Date(nextContest.startTime).toLocaleString()}</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded border border-border-default bg-bg-elevated font-mono text-xs">
+                      <p className="text-text-muted">No upcoming contests scheduled.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Status Bar */}

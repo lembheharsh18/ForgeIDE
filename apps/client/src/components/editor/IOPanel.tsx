@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { useEffect, useState, useCallback } from 'react';
 
 import { useCFSubmit } from '../../hooks/useCFSubmit';
+import { useLiveContest } from '../../hooks/useLiveContest';
 import { useRunTests } from '../../hooks/useRunTests';
+import api from '../../lib/axios';
 import { useCFSettingsStore } from '../../store/cfSettingsStore';
 import type { Verdict } from '../../store/editorStore';
 import { useEditorStore } from '../../store/editorStore';
@@ -78,6 +80,13 @@ export function IOPanel() {
 
   const [copied, setCopied] = useState(false);
   const [showCFSettings, setShowCFSettings] = useState(false);
+  const { contest } = useLiveContest();
+
+  // Reverse Coding Try Input
+  const [tryInputVal, setTryInputVal] = useState('');
+  const [tryOutputVal, setTryOutputVal] = useState('');
+  const [tryInputLoading, setTryInputLoading] = useState(false);
+  const [queriesLeft, setQueriesLeft] = useState<number | null>(null);
 
   // CF Submit Integration
   const cfSubmit = useCFSubmit();
@@ -112,6 +121,26 @@ export function IOPanel() {
 
   const testCases = currentProblem?.testCases || [];
 
+  const handleTryInput = async () => {
+    if (!currentProblem?.id || !tryInputVal) return;
+    setTryInputLoading(true);
+    try {
+      const { data } = await api.post('/api/reverse-code/try-input', {
+        problemId: currentProblem.id,
+        input: tryInputVal,
+      });
+      setTryOutputVal(data.output);
+      setQueriesLeft(data.queriesRemaining);
+    } catch (err: any) {
+      setTryOutputVal(err.response?.data?.message || 'Error occurred while executing reference solution.');
+    } finally {
+      setTryInputLoading(false);
+    }
+  };
+
+  const tabs = ['custom', 'testcases'] as const;
+  const allTabs = contest?.type === 'REVERSE_CODING' ? [...tabs, 'tryinput' as const] : tabs;
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -128,9 +157,9 @@ export function IOPanel() {
           borderBottom: '1px solid var(--border-subtle)',
         }}
       >
-        {(['custom', 'testcases'] as const).map((tab) => {
+        {allTabs.map((tab) => {
           const isActive = activeTab === tab;
-          const label = tab === 'custom' ? 'CUSTOM INPUT' : 'TEST CASES';
+          const label = tab === 'custom' ? 'CUSTOM INPUT' : tab === 'testcases' ? 'TEST CASES' : 'TRY INPUT';
           return (
             <button
               key={tab}
@@ -630,6 +659,60 @@ export function IOPanel() {
                   );
                 })
               )}
+            </div>
+          </div>
+        ) : (
+          /* ── Try Input Tab ────────────────── */
+          <div className="flex h-full">
+            <div className="flex-1 flex flex-col" style={{ borderRight: '1px solid var(--border-subtle)' }}>
+              <div className="px-3 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">TEST INPUT</span>
+              </div>
+              <textarea
+                value={tryInputVal}
+                onChange={(e) => setTryInputVal(e.target.value)}
+                className="flex-1 w-full resize-none outline-none p-3 bg-bg-primary text-text-primary border-none font-mono text-[12px] leading-[1.6]"
+                placeholder="Enter input for the reference solution..."
+                spellCheck={false}
+              />
+            </div>
+            
+            <div className="flex-1 flex flex-col" style={{ borderRight: '1px solid var(--border-subtle)' }}>
+              <div className="flex items-center justify-between px-3 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">REFERENCE OUTPUT</span>
+              </div>
+              <div className="flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.6] whitespace-pre-wrap bg-bg-primary text-text-primary">
+                {tryInputLoading ? (
+                  <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-text-muted">
+                    Running reference solution...
+                  </motion.span>
+                ) : (
+                  tryOutputVal || <span className="text-text-muted">Output will appear here...</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col shrink-0 w-[160px] bg-bg-surface">
+              <div className="px-3 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">ACTIONS</span>
+              </div>
+              <div className="flex-1 flex flex-col px-4 pt-4 gap-4">
+                {queriesLeft !== null && (
+                  <div>
+                    <span className="text-[9px] tracking-wider block mb-1 text-text-muted font-mono">QUERIES LEFT</span>
+                    <span className="text-lg font-bold text-text-primary font-mono">{queriesLeft}</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleTryInput}
+                  disabled={tryInputLoading || !tryInputVal.trim()}
+                  className="w-full py-1.5 rounded text-[11px] font-bold tracking-wider transition-all duration-200 disabled:opacity-50 bg-accent text-[#0a0a0a] font-mono mt-auto mb-4"
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.3)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  {tryInputLoading ? '⟳ RUNNING' : '▶ TRY INPUT'}
+                </button>
+              </div>
             </div>
           </div>
         )}
