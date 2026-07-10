@@ -20,9 +20,9 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-// ── LoginForm Component ──────────────────────────
+// ── AdminLoginForm Component ─────────────────────
 
-export function LoginForm() {
+export function AdminLoginForm() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
@@ -44,12 +44,24 @@ export function LoginForm() {
     setServerError(null);
     try {
       const res = await api.post('/api/auth/login', data);
+      // Verify this is an admin account
+      if (res.data.user.role !== 'ADMIN') {
+        setServerError('This account does not have admin privileges.');
+        return;
+      }
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/club');
+      router.push('/admin/contests/add');
     } catch (err: any) {
       setServerError(err.response?.data?.message || 'Login failed. Please try again.');
     }
   };
+
+  const inputStyle = (hasError: boolean) => ({
+    backgroundColor: 'var(--bg-elevated)',
+    border: `1px solid ${hasError ? '#ff4545' : 'var(--border-default)'}`,
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-space-mono), Space Mono, monospace',
+  });
 
   return (
     <motion.div
@@ -68,11 +80,11 @@ export function LoginForm() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="relative">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ff8c42' }} />
             <div
               className="absolute inset-0 w-3 h-3 rounded-full animate-ping"
               style={{
-                backgroundColor: 'var(--accent)',
+                backgroundColor: '#ff8c42',
                 opacity: 0.4,
               }}
             />
@@ -81,7 +93,7 @@ export function LoginForm() {
             className="text-xl font-bold tracking-widest"
             style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
           >
-            FORGE IDE
+            FORGE <span style={{ color: '#ff8c42' }}>ADMIN</span>
           </h1>
         </div>
 
@@ -90,7 +102,7 @@ export function LoginForm() {
           className="text-2xl font-bold text-center mb-2"
           style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
         >
-          Welcome back
+          Admin Login
         </h2>
         <p
           className="text-center mb-8 text-sm"
@@ -99,8 +111,23 @@ export function LoginForm() {
             fontFamily: 'var(--font-space-mono), Space Mono, monospace',
           }}
         >
-          Sign in to continue coding
+          Manage contests, problems & settings
         </p>
+
+        {/* Admin badge */}
+        <div className="flex items-center justify-center mb-6">
+          <span
+            className="px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase"
+            style={{
+              backgroundColor: 'rgba(255, 140, 66, 0.1)',
+              border: '1px solid rgba(255, 140, 66, 0.3)',
+              color: '#ff8c42',
+              fontFamily: 'var(--font-space-mono), Space Mono, monospace',
+            }}
+          >
+            ● Admin Access Only
+          </span>
+        </div>
 
         {/* Server Error */}
         {serverError && (
@@ -124,34 +151,29 @@ export function LoginForm() {
           {/* Email */}
           <div>
             <label
-              htmlFor="login-email"
+              htmlFor="admin-login-email"
               className="block mb-2 text-xs tracking-wider uppercase"
               style={{
                 color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-space-mono), Space Mono, monospace',
               }}
             >
-              Email
+              Admin Email
             </label>
             <input
-              id="login-email"
+              id="admin-login-email"
               type="email"
               autoComplete="email"
               {...register('email')}
               className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: `1px solid ${errors.email ? '#ff4545' : 'var(--border-default)'}`,
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-              }}
+              style={inputStyle(!!errors.email)}
               onFocus={(e) => {
-                if (!errors.email) e.target.style.borderColor = 'var(--accent)';
+                if (!errors.email) e.target.style.borderColor = '#ff8c42';
               }}
               onBlur={(e) => {
                 if (!errors.email) e.target.style.borderColor = 'var(--border-default)';
               }}
-              placeholder="you@example.com"
+              placeholder="admin@example.com"
             />
             {errors.email && (
               <p className="mt-1 text-xs" style={{ color: '#ff4545' }}>
@@ -163,7 +185,7 @@ export function LoginForm() {
           {/* Password */}
           <div>
             <label
-              htmlFor="login-password"
+              htmlFor="admin-login-password"
               className="block mb-2 text-xs tracking-wider uppercase"
               style={{
                 color: 'var(--text-secondary)',
@@ -174,19 +196,14 @@ export function LoginForm() {
             </label>
             <div className="relative">
               <input
-                id="login-password"
+                id="admin-login-password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 {...register('password')}
                 className="w-full px-4 py-3 pr-12 rounded-md text-[13px] outline-none transition-all duration-200"
-                style={{
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: `1px solid ${errors.password ? '#ff4545' : 'var(--border-default)'}`,
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-                }}
+                style={inputStyle(!!errors.password)}
                 onFocus={(e) => {
-                  if (!errors.password) e.target.style.borderColor = 'var(--accent)';
+                  if (!errors.password) e.target.style.borderColor = '#ff8c42';
                 }}
                 onBlur={(e) => {
                   if (!errors.password) e.target.style.borderColor = 'var(--border-default)';
@@ -216,29 +233,29 @@ export function LoginForm() {
 
           {/* Submit */}
           <button
-            id="login-submit"
+            id="admin-login-submit"
             type="submit"
             disabled={isSubmitting}
             className="w-full py-3 rounded-md text-sm font-bold tracking-widest uppercase transition-all duration-200 disabled:opacity-50"
             style={{
-              backgroundColor: 'var(--accent)',
+              backgroundColor: '#ff8c42',
               color: '#0a0a0a',
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
               letterSpacing: '1px',
             }}
             onMouseEnter={(e) => {
               if (!isSubmitting)
-                e.currentTarget.style.boxShadow = '0 0 20px rgba(232, 255, 90, 0.4)';
+                e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 140, 66, 0.4)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            {isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}
+            {isSubmitting ? 'SIGNING IN...' : 'ADMIN SIGN IN'}
           </button>
         </form>
 
-        {/* Link to Register */}
+        {/* Links */}
         <div className="mt-6 space-y-2">
           <p
             className="text-center text-sm"
@@ -247,11 +264,11 @@ export function LoginForm() {
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
             }}
           >
-            Don&apos;t have an account?{' '}
+            Need an admin account?{' '}
             <Link
-              href="/register"
+              href="/admin/register"
               className="transition-colors duration-200"
-              style={{ color: 'var(--accent)' }}
+              style={{ color: '#ff8c42' }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
@@ -265,15 +282,15 @@ export function LoginForm() {
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
             }}
           >
-            Admin?{' '}
+            Not an admin?{' '}
             <Link
-              href="/admin/login"
+              href="/login"
               className="transition-colors duration-200"
-              style={{ color: 'var(--orange, #ff8c42)' }}
+              style={{ color: 'var(--accent)' }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
-              Login as admin
+              User login
             </Link>
           </p>
         </div>

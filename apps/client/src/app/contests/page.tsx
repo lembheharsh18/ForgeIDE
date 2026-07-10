@@ -61,64 +61,82 @@ export default function ContestsPage() {
     return days === 0 ? 'Today' : `${days} days ago`;
   };
 
-  const ContestCard = ({ contest, isPast }: { contest: Contest; isPast: boolean }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col justify-between gap-6 rounded-lg border border-border-default bg-bg-surface p-5 transition-colors hover:border-border-subtle md:flex-row md:items-center"
-    >
-      <div className="flex flex-1 flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <Badge
-            variant={`platform-${contest.platform}` as BadgeVariant}
-            label={contest.platform}
-          />
-          <h3 className="text-lg font-bold text-text-primary">{contest.name}</h3>
-        </div>
-        {contest.description && (
-          <p className="line-clamp-2 text-sm text-text-muted">{contest.description}</p>
-        )}
-        <div className="mt-2 flex items-center gap-4 font-mono text-xs text-text-muted">
-          <span>
-            {formatDate(contest.startTime)} - {formatDate(contest.endTime)}
-          </span>
-          <span>{contest.participantCount} participants</span>
-        </div>
-      </div>
+  const ContestCard = ({ contest, isPast }: { contest: Contest; isPast: boolean }) => {
+    const isReverseCoding = (contest as any).type === 'REVERSE_CODING';
 
-      <div className="flex shrink-0 flex-col items-end gap-4">
-        {!isPast ? (
-          <Countdown targetDate={contest.startTime} />
-        ) : (
-          <span className="font-mono text-sm italic text-text-muted">
-            Ended {getDaysAgo(contest.endTime)}
-          </span>
-        )}
-
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/contests/${contest.id}/leaderboard`}
-            className="rounded border border-border-default px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-accent hover:text-accent"
-          >
-            Contest leaderboard
-          </Link>
-          {isAdmin && (
-            <button className="px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text-primary">
-              Edit
-            </button>
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col justify-between gap-6 rounded-lg border border-border-default bg-bg-surface p-5 transition-colors hover:border-border-subtle md:flex-row md:items-center"
+      >
+        <div className="flex flex-1 flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={`platform-${contest.platform}` as BadgeVariant}
+              label={contest.platform}
+            />
+            {isReverseCoding && (
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-accent border border-accent/30">
+                REVERSE CODING
+              </span>
+            )}
+            <h3 className="text-lg font-bold text-text-primary">{contest.name}</h3>
+          </div>
+          {contest.description && (
+            <p className="line-clamp-2 text-sm text-text-muted">{contest.description}</p>
           )}
-          <a
-            href={contest.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded bg-accent px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-bg-primary transition-colors hover:bg-[#fbbf24]"
-          >
-            {isPast ? 'View contest' : 'Register'}
-          </a>
+          <div className="mt-2 flex items-center gap-4 font-mono text-xs text-text-muted">
+            <span>
+              {formatDate(contest.startTime)} - {formatDate(contest.endTime)}
+            </span>
+            <span>{contest.participantCount} participants</span>
+          </div>
         </div>
-      </div>
-    </motion.div>
-  );
+
+        <div className="flex shrink-0 flex-col items-end gap-4">
+          {!isPast ? (
+            <Countdown targetDate={contest.startTime} />
+          ) : (
+            <span className="font-mono text-sm italic text-text-muted">
+              Ended {getDaysAgo(contest.endTime)}
+            </span>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/contests/${contest.id}/leaderboard`}
+              className="rounded border border-border-default px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-accent hover:text-accent"
+            >
+              Contest leaderboard
+            </Link>
+            {isAdmin && (
+              <button className="px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text-primary">
+                Edit
+              </button>
+            )}
+            {isReverseCoding ? (
+              <Link
+                href={`/ide?contestId=${contest.id}`}
+                className="rounded bg-accent px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-bg-primary transition-colors hover:bg-[#fbbf24]"
+              >
+                {isPast ? 'View' : 'Enter Arena'}
+              </Link>
+            ) : (
+              <a
+                href={contest.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded bg-accent px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-bg-primary transition-colors hover:bg-[#fbbf24]"
+              >
+                {isPast ? 'View contest' : 'Register'}
+              </a>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <ProtectedRoute>

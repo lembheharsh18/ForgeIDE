@@ -61,11 +61,10 @@ export default function ProfilePage() {
                 {user.username.slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <h1 className="text-2xl font-bold font-syne tracking-wider m-0">
-                  {user.username}
-                </h1>
+                <h1 className="text-2xl font-bold font-syne tracking-wider m-0">{user.username}</h1>
                 <p className="text-xs text-text-muted font-mono mt-1">
-                  Member since {new Date(user.createdAt).toLocaleDateString()}
+                  Member since{' '}
+                  {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'recently'}
                 </p>
               </div>
             </div>
@@ -83,7 +82,9 @@ export default function ProfilePage() {
             {/* Codeforces */}
             <div className="p-5 bg-bg-surface border border-border-subtle rounded-lg flex flex-col gap-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] tracking-widest text-[#3b5998] font-bold">CODEFORCES</span>
+                <span className="font-mono text-[10px] tracking-widest text-[#3b5998] font-bold">
+                  CODEFORCES
+                </span>
                 {user.codeforcesHandle && (
                   <span className="font-mono text-xs text-text-muted">{user.codeforcesHandle}</span>
                 )}
@@ -107,7 +108,9 @@ export default function ProfilePage() {
             {/* LeetCode */}
             <div className="p-5 bg-bg-surface border border-border-subtle rounded-lg flex flex-col gap-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] tracking-widest text-[#ffa116] font-bold">LEETCODE</span>
+                <span className="font-mono text-[10px] tracking-widest text-[#ffa116] font-bold">
+                  LEETCODE
+                </span>
                 {user.leetcodeUsername && (
                   <span className="font-mono text-xs text-text-muted">{user.leetcodeUsername}</span>
                 )}
@@ -129,7 +132,9 @@ export default function ProfilePage() {
             {/* CodeChef */}
             <div className="p-5 bg-bg-surface border border-border-subtle rounded-lg flex flex-col gap-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] tracking-widest text-[#5B4638] font-bold">CODECHEF</span>
+                <span className="font-mono text-[10px] tracking-widest text-[#5B4638] font-bold">
+                  CODECHEF
+                </span>
                 {user.codechefHandle && (
                   <span className="font-mono text-xs text-text-muted">{user.codechefHandle}</span>
                 )}
@@ -153,16 +158,19 @@ export default function ProfilePage() {
         </motion.div>
       </div>
 
-      <ProfileSettingsModal isOpen={showSettings} onClose={() => {
-        setShowSettings(false);
-        // Refresh stats on close
-        setLoadingStats(true);
-        api
-          .get(`/api/users/${user.username}/platform-profiles`)
-          .then((res) => setPlatformStats(res.data))
-          .catch(() => {})
-          .finally(() => setLoadingStats(false));
-      }} />
+      <ProfileSettingsModal
+        isOpen={showSettings}
+        onClose={() => {
+          setShowSettings(false);
+          // Refresh stats on close
+          setLoadingStats(true);
+          api
+            .get(`/api/users/${user.username}/platform-profiles`)
+            .then((res) => setPlatformStats(res.data))
+            .catch(() => {})
+            .finally(() => setLoadingStats(false));
+        }}
+      />
     </main>
   );
 }

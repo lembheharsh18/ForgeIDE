@@ -132,7 +132,9 @@ export function IOPanel() {
       setTryOutputVal(data.output);
       setQueriesLeft(data.queriesRemaining);
     } catch (err: any) {
-      setTryOutputVal(err.response?.data?.message || 'Error occurred while executing reference solution.');
+      setTryOutputVal(
+        err.response?.data?.message || 'Error occurred while executing reference solution.',
+      );
     } finally {
       setTryInputLoading(false);
     }
@@ -159,7 +161,8 @@ export function IOPanel() {
       >
         {allTabs.map((tab) => {
           const isActive = activeTab === tab;
-          const label = tab === 'custom' ? 'CUSTOM INPUT' : tab === 'testcases' ? 'TEST CASES' : 'TRY INPUT';
+          const label =
+            tab === 'custom' ? 'CUSTOM INPUT' : tab === 'testcases' ? 'TEST CASES' : 'TRY INPUT';
           return (
             <button
               key={tab}
@@ -478,7 +481,7 @@ export function IOPanel() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'testcases' ? (
           /* ── Test Cases Tab ──────────────── */
           <div className="h-full flex flex-col overflow-hidden">
             {/* Run All button */}
@@ -664,9 +667,17 @@ export function IOPanel() {
         ) : (
           /* ── Try Input Tab ────────────────── */
           <div className="flex h-full">
-            <div className="flex-1 flex flex-col" style={{ borderRight: '1px solid var(--border-subtle)' }}>
-              <div className="px-3 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">TEST INPUT</span>
+            <div
+              className="flex-1 flex flex-col"
+              style={{ borderRight: '1px solid var(--border-subtle)' }}
+            >
+              <div
+                className="px-3 py-1.5 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              >
+                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">
+                  TEST INPUT
+                </span>
               </div>
               <textarea
                 value={tryInputVal}
@@ -676,39 +687,66 @@ export function IOPanel() {
                 spellCheck={false}
               />
             </div>
-            
-            <div className="flex-1 flex flex-col" style={{ borderRight: '1px solid var(--border-subtle)' }}>
-              <div className="flex items-center justify-between px-3 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">REFERENCE OUTPUT</span>
+
+            <div
+              className="flex-1 flex flex-col"
+              style={{ borderRight: '1px solid var(--border-subtle)' }}
+            >
+              <div
+                className="flex items-center justify-between px-3 py-1.5 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              >
+                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">
+                  REFERENCE OUTPUT
+                </span>
               </div>
               <div className="flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.6] whitespace-pre-wrap bg-bg-primary text-text-primary">
                 {tryInputLoading ? (
-                  <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-text-muted">
+                  <motion.span
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                    className="text-text-muted"
+                  >
                     Running reference solution...
                   </motion.span>
                 ) : (
-                  tryOutputVal || <span className="text-text-muted">Output will appear here...</span>
+                  tryOutputVal || (
+                    <span className="text-text-muted">Output will appear here...</span>
+                  )
                 )}
               </div>
             </div>
 
             <div className="flex flex-col shrink-0 w-[160px] bg-bg-surface">
-              <div className="px-3 py-1.5 shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">ACTIONS</span>
+              <div
+                className="px-3 py-1.5 shrink-0"
+                style={{ borderBottom: '1px solid var(--border-subtle)' }}
+              >
+                <span className="text-[9px] tracking-[2px] uppercase text-text-muted font-mono">
+                  ACTIONS
+                </span>
               </div>
               <div className="flex-1 flex flex-col px-4 pt-4 gap-4">
                 {queriesLeft !== null && (
                   <div>
-                    <span className="text-[9px] tracking-wider block mb-1 text-text-muted font-mono">QUERIES LEFT</span>
-                    <span className="text-lg font-bold text-text-primary font-mono">{queriesLeft}</span>
+                    <span className="text-[9px] tracking-wider block mb-1 text-text-muted font-mono">
+                      QUERIES LEFT
+                    </span>
+                    <span className="text-lg font-bold text-text-primary font-mono">
+                      {queriesLeft}
+                    </span>
                   </div>
                 )}
                 <button
                   onClick={handleTryInput}
                   disabled={tryInputLoading || !tryInputVal.trim()}
                   className="w-full py-1.5 rounded text-[11px] font-bold tracking-wider transition-all duration-200 disabled:opacity-50 bg-accent text-[#0a0a0a] font-mono mt-auto mb-4"
-                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.3)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
                   {tryInputLoading ? '⟳ RUNNING' : '▶ TRY INPUT'}
                 </button>

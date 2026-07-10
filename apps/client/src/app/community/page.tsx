@@ -2,12 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { useEffect, useState, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 
+import { VoiceRoom } from '../../components/community/VoiceRoom';
+import { Whiteboard } from '../../components/community/Whiteboard';
 import { ProtectedRoute } from '../../components/layout/ProtectedRoute';
 import { Topbar } from '../../components/layout/Topbar';
-import { Whiteboard } from '../../components/community/Whiteboard';
-import { VoiceRoom } from '../../components/community/VoiceRoom';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 
@@ -40,7 +41,7 @@ export default function CommunityPage() {
   const [input, setInput] = useState('');
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [showVoice, setShowVoice] = useState(false);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll
@@ -50,8 +51,9 @@ export default function CommunityPage() {
 
   // Fetch Rooms
   useEffect(() => {
-    api.get('/api/chat/rooms')
-      .then(res => {
+    api
+      .get('/api/chat/rooms')
+      .then((res) => {
         setRooms(res.data.data);
         if (res.data.data.length > 0) {
           setActiveRoom(res.data.data[0]);
@@ -65,14 +67,10 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!accessToken || !activeRoom) return;
 
-    const newSocket = io(
-      process.env.NEXT_PUBLIC_SOCKET_URL || 'ws://localhost:4000',
-      {
-        namespace: '/chat',
-        auth: { token: accessToken },
-        transports: ['websocket'],
-      }
-    );
+    const newSocket = io((process.env.NEXT_PUBLIC_SOCKET_URL || 'ws://localhost:4000') + '/chat', {
+      auth: { token: accessToken },
+      transports: ['websocket'],
+    });
 
     setSocket(newSocket);
 
@@ -81,18 +79,19 @@ export default function CommunityPage() {
     });
 
     newSocket.on('new-message', (msg: Message) => {
-      setMessages(prev => [...prev, msg]);
+      setMessages((prev) => [...prev, msg]);
     });
 
     newSocket.on('message-deleted', (msgId: string) => {
-      setMessages(prev => prev.map(m => 
-        m.id === msgId ? { ...m, deletedAt: new Date().toISOString() } : m
-      ));
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, deletedAt: new Date().toISOString() } : m)),
+      );
     });
 
     // Fetch message history for the active room
-    api.get(`/api/chat/rooms/${activeRoom.id}/messages`)
-      .then(res => {
+    api
+      .get(`/api/chat/rooms/${activeRoom.id}/messages`)
+      .then((res) => {
         if (res.data.success) {
           setMessages(res.data.data);
         }
@@ -133,17 +132,23 @@ export default function CommunityPage() {
               {loadingRooms ? (
                 <div className="animate-pulse h-10 bg-bg-elevated rounded w-full" />
               ) : (
-                rooms.map(room => (
+                rooms.map((room) => (
                   <button
                     key={room.id}
                     onClick={() => setActiveRoom(room)}
                     className="flex flex-col text-left px-3 py-2 rounded transition-colors"
                     style={{
-                      backgroundColor: activeRoom?.id === room.id ? 'var(--bg-hover)' : 'transparent',
+                      backgroundColor:
+                        activeRoom?.id === room.id ? 'var(--bg-hover)' : 'transparent',
                       border: `1px solid ${activeRoom?.id === room.id ? 'var(--border-default)' : 'transparent'}`,
                     }}
                   >
-                    <span className="font-mono text-xs font-bold" style={{ color: activeRoom?.id === room.id ? 'var(--accent)' : 'var(--text-primary)' }}>
+                    <span
+                      className="font-mono text-xs font-bold"
+                      style={{
+                        color: activeRoom?.id === room.id ? 'var(--accent)' : 'var(--text-primary)',
+                      }}
+                    >
                       # {room.name}
                     </span>
                     {room.description && (
@@ -159,13 +164,13 @@ export default function CommunityPage() {
 
           {/* Whiteboard Area */}
           <div className="flex-1 bg-[#121212] flex flex-col relative overflow-hidden">
-             {activeRoom && socket ? (
-               <Whiteboard socket={socket} roomId={activeRoom.id} />
-             ) : (
-               <div className="flex-1 flex items-center justify-center text-text-muted font-mono">
-                 Select a room to join the whiteboard
-               </div>
-             )}
+            {activeRoom && socket ? (
+              <Whiteboard socket={socket} roomId={activeRoom.id} />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-text-muted font-mono">
+                Select a room to join the whiteboard
+              </div>
+            )}
           </div>
 
           {/* Chat Area */}
@@ -204,7 +209,7 @@ export default function CommunityPage() {
                 const showHeader = idx === 0 || messages[idx - 1].userId !== msg.userId;
 
                 return (
-                  <motion.div 
+                  <motion.div
                     key={msg.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -212,7 +217,10 @@ export default function CommunityPage() {
                   >
                     {showHeader && (
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-xs font-bold" style={{ color: isMe ? 'var(--accent)' : 'var(--text-primary)' }}>
+                        <span
+                          className="font-mono text-xs font-bold"
+                          style={{ color: isMe ? 'var(--accent)' : 'var(--text-primary)' }}
+                        >
                           {msg.user.username}
                         </span>
                         {msg.user.role === 'ADMIN' && (
@@ -221,21 +229,34 @@ export default function CommunityPage() {
                           </span>
                         )}
                         <span className="text-[10px] text-text-muted font-mono ml-1">
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(msg.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                       </div>
                     )}
-                    
+
                     <div className="relative group max-w-[70%]">
-                      <div 
+                      <div
                         className="px-4 py-2 rounded-lg text-sm font-mono leading-relaxed break-words"
                         style={{
-                          backgroundColor: msg.deletedAt ? 'var(--bg-elevated)' : (isMe ? 'rgba(232, 255, 90, 0.1)' : 'var(--bg-surface)'),
-                          border: `1px solid ${msg.deletedAt ? 'var(--border-subtle)' : (isMe ? 'rgba(232, 255, 90, 0.2)' : 'var(--border-default)')}`,
+                          backgroundColor: msg.deletedAt
+                            ? 'var(--bg-elevated)'
+                            : isMe
+                              ? 'rgba(232, 255, 90, 0.1)'
+                              : 'var(--bg-surface)',
+                          border: `1px solid ${msg.deletedAt ? 'var(--border-subtle)' : isMe ? 'rgba(232, 255, 90, 0.2)' : 'var(--border-default)'}`,
                           color: msg.deletedAt ? 'var(--text-muted)' : 'var(--text-primary)',
                         }}
                       >
-                        {msg.deletedAt ? <em className="italic text-xs text-text-muted">This message was deleted.</em> : msg.content}
+                        {msg.deletedAt ? (
+                          <em className="italic text-xs text-text-muted">
+                            This message was deleted.
+                          </em>
+                        ) : (
+                          msg.content
+                        )}
                       </div>
 
                       {/* Admin Delete Button */}
@@ -265,8 +286,8 @@ export default function CommunityPage() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={`Message #${activeRoom?.name || 'room'}...`}
                   className="flex-1 bg-bg-elevated border border-border-default rounded px-4 py-2.5 text-sm font-mono outline-none transition-colors"
-                  onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--border-default)'}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border-default)')}
                 />
                 <button
                   type="submit"

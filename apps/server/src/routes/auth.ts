@@ -7,6 +7,7 @@ import { COOKIE_OPTIONS } from '../config/constants';
 import { prisma } from '../config/db';
 import { authLimiter } from '../middleware/rateLimiter';
 import { requireAuth } from '../middleware/requireAuth';
+import { fetchCFRating, fetchLCRating, fetchCCRating } from '../services/cpStats';
 import type { TokenPayload } from '../utils/jwt';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { hashPassword, comparePassword } from '../utils/password';
@@ -27,12 +28,58 @@ const registerSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least 1 uppercase letter')
     .regex(/[0-9]/, 'Password must contain at least 1 number'),
+  codeforcesHandle: z.string().min(1, 'Codeforces handle is required'),
+  codechefHandle: z.string().min(1, 'CodeChef handle is required'),
+  leetcodeUsername: z.string().min(1, 'LeetCode username is required'),
+});
+
+const adminRegisterSchema = registerSchema.extend({
+  inviteCode: z.string().min(1, 'Invite code is required'),
 });
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 });
+
+// ── Handle Verification ──────────────────────────
+
+async function verifyHandles(
+  cfHandle: string,
+  ccHandle: string,
+  lcUsername: string,
+): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+
+  const [cfResult, lcResult, ccResult] = await Promise.allSettled([
+    fetchCFRating(cfHandle),
+    fetchLCRating(lcUsername),
+    fetchCCRating(ccHandle),
+  ]);
+
+  // CF: if the API returns null rating AND null rank, the handle likely doesn't exist
+  if (cfResult.status === 'fulfilled') {
+    const { rating, rank } = cfResult.value;
+    if (rating === null && rank === null) {
+      errors.push(`Codeforces handle "${cfHandle}" not found`);
+    }
+  } else {
+    errors.push('Failed to verify Codeforces handle');
+  }
+
+  // LC: we're more lenient — null rating is OK for unrated users
+  // only reject on network failure
+  if (lcResult.status === 'rejected') {
+    errors.push('Failed to verify LeetCode username');
+  }
+
+  // CC: similar — null rating is OK for new users
+  if (ccResult.status === 'rejected') {
+    errors.push('Failed to verify CodeChef handle');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
 
 // ── POST /api/auth/register ──────────────────────
 
@@ -48,7 +95,8 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       return;
     }
 
-    const { username, email, password } = validation.data;
+    const { username, email, password, codeforcesHandle, codechefHandle, leetcodeUsername } =
+      validation.data;
 
     // Check uniqueness
     const existingUser = await prisma.user.findFirst({
@@ -66,6 +114,17 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       return;
     }
 
+    // Verify coding handles
+    const handleCheck = await verifyHandles(codeforcesHandle, codechefHandle, leetcodeUsername);
+    if (!handleCheck.valid) {
+      res.status(400).json({
+        error: 'Handle verification failed',
+        message: handleCheck.errors.join('; '),
+        details: { handleErrors: handleCheck.errors },
+      });
+      return;
+    }
+
     // Hash password
     const passwordHash = await hashPassword(password);
 
@@ -76,6 +135,10 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
           username,
           email,
           passwordHash,
+          codeforcesHandle,
+          codechefHandle,
+          leetcodeUsername,
+          handlesVerified: true,
         },
       });
 
@@ -85,6 +148,13 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
           score: 0,
           solvedCount: 0,
           rank: 0,
+        },
+      });
+
+      // Create platform profile cache
+      await tx.platformProfileCache.create({
+        data: {
+          userId: newUser.id,
         },
       });
 
@@ -110,6 +180,9 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        codeforcesHandle: user.codeforcesHandle,
+        codechefHandle: user.codechefHandle,
+        leetcodeUsername: user.leetcodeUsername,
       },
       accessToken,
     });
@@ -118,6 +191,136 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to register user',
+    });
+  }
+});
+
+// ── POST /api/auth/register-admin ────────────────
+
+router.post('/register-admin', authLimiter, async (req: Request, res: Response) => {
+  try {
+    const validation = adminRegisterSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      res.status(400).json({
+        error: 'Validation failed',
+        details: validation.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const {
+      username,
+      email,
+      password,
+      codeforcesHandle,
+      codechefHandle,
+      leetcodeUsername,
+      inviteCode,
+    } = validation.data;
+
+    // Verify invite code
+    const expectedCode = process.env.ADMIN_INVITE_CODE || 'forge-admin-2024';
+    if (inviteCode !== expectedCode) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Invalid invite code',
+      });
+      return;
+    }
+
+    // Check uniqueness
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
+      },
+    });
+
+    if (existingUser) {
+      const field = existingUser.username === username ? 'username' : 'email';
+      res.status(409).json({
+        error: 'Conflict',
+        message: `A user with this ${field} already exists`,
+      });
+      return;
+    }
+
+    // Verify coding handles
+    const handleCheck = await verifyHandles(codeforcesHandle, codechefHandle, leetcodeUsername);
+    if (!handleCheck.valid) {
+      res.status(400).json({
+        error: 'Handle verification failed',
+        message: handleCheck.errors.join('; '),
+        details: { handleErrors: handleCheck.errors },
+      });
+      return;
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Create admin user
+    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const newUser = await tx.user.create({
+        data: {
+          username,
+          email,
+          passwordHash,
+          role: 'ADMIN',
+          codeforcesHandle,
+          codechefHandle,
+          leetcodeUsername,
+          handlesVerified: true,
+        },
+      });
+
+      await tx.leaderboardEntry.create({
+        data: {
+          userId: newUser.id,
+          score: 0,
+          solvedCount: 0,
+          rank: 0,
+        },
+      });
+
+      await tx.platformProfileCache.create({
+        data: {
+          userId: newUser.id,
+        },
+      });
+
+      return newUser;
+    });
+
+    // Generate tokens
+    const payload: TokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
+
+    res.status(201).json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        codeforcesHandle: user.codeforcesHandle,
+        codechefHandle: user.codechefHandle,
+        leetcodeUsername: user.leetcodeUsername,
+      },
+      accessToken,
+    });
+  } catch (error) {
+    console.error('[Auth] Admin register error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to register admin',
     });
   }
 });
@@ -181,6 +384,9 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        codeforcesHandle: user.codeforcesHandle,
+        codechefHandle: user.codechefHandle,
+        leetcodeUsername: user.leetcodeUsername,
       },
       accessToken,
     });
@@ -276,6 +482,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
         codeforcesHandle: true,
         codechefHandle: true,
         leetcodeUsername: true,
+        handlesVerified: true,
         avatarUrl: true,
         createdAt: true,
         updatedAt: true,

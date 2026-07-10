@@ -13,13 +13,13 @@ import { useAuthStore } from '../../store/authStore';
 
 // ── Validation Schema ────────────────────────────
 
-const registerSchema = z
+const adminRegisterSchema = z
   .object({
     username: z
       .string()
       .min(3, 'Username must be at least 3 characters')
       .max(20, 'Username must be at most 20 characters')
-      .regex(/^[a-zA-Z0-9_]+$/, 'Username must be alphanumeric (underscores allowed)'),
+      .regex(/^[a-zA-Z0-9_]+$/, 'Username must be alphanumeric'),
     email: z.string().email('Invalid email address'),
     password: z
       .string()
@@ -27,6 +27,7 @@ const registerSchema = z
       .regex(/[A-Z]/, 'Must contain at least 1 uppercase letter')
       .regex(/[0-9]/, 'Must contain at least 1 number'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
+    inviteCode: z.string().min(1, 'Invite code is required'),
     codeforcesHandle: z.string().min(1, 'Codeforces handle is required'),
     codechefHandle: z.string().min(1, 'CodeChef handle is required'),
     leetcodeUsername: z.string().min(1, 'LeetCode username is required'),
@@ -36,16 +37,15 @@ const registerSchema = z
     path: ['confirmPassword'],
   });
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+type AdminRegisterFormData = z.infer<typeof adminRegisterSchema>;
 
-// ── RegisterForm Component ───────────────────────
+// ── AdminRegisterForm Component ──────────────────
 
-export function RegisterForm() {
+export function AdminRegisterForm() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
   const [step, setStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -53,13 +53,14 @@ export function RegisterForm() {
     handleSubmit,
     trigger,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  } = useForm<AdminRegisterFormData>({
+    resolver: zodResolver(adminRegisterSchema),
     defaultValues: {
       username: '',
       email: '',
       password: '',
       confirmPassword: '',
+      inviteCode: '',
       codeforcesHandle: '',
       codechefHandle: '',
       leetcodeUsername: '',
@@ -67,33 +68,37 @@ export function RegisterForm() {
   });
 
   const handleNextStep = async () => {
-    const isValid = await trigger(['username', 'email', 'password', 'confirmPassword']);
+    const isValid = await trigger([
+      'username',
+      'email',
+      'password',
+      'confirmPassword',
+      'inviteCode',
+    ]);
     if (isValid) setStep(2);
   };
 
-  const onSubmit = async (data: RegisterFormData) => {
+  const onSubmit = async (data: AdminRegisterFormData) => {
     setServerError(null);
     try {
-      const res = await api.post('/api/auth/register', {
+      const res = await api.post('/api/auth/register-admin', {
         username: data.username,
         email: data.email,
         password: data.password,
+        inviteCode: data.inviteCode,
         codeforcesHandle: data.codeforcesHandle,
         codechefHandle: data.codechefHandle,
         leetcodeUsername: data.leetcodeUsername,
       });
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/club');
+      router.push('/admin/contests/add');
     } catch (err: any) {
       const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Registration failed. Please try again.';
+        err.response?.data?.message || err.response?.data?.error || 'Registration failed.';
       setServerError(msg);
     }
   };
 
-  // Shared input styles
   const inputStyle = (hasError: boolean) => ({
     backgroundColor: 'var(--bg-elevated)',
     border: `1px solid ${hasError ? '#ff4545' : 'var(--border-default)'}`,
@@ -121,22 +126,19 @@ export function RegisterForm() {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
+        <div className="flex items-center justify-center gap-3 mb-6">
           <div className="relative">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ff8c42' }} />
             <div
               className="absolute inset-0 w-3 h-3 rounded-full animate-ping"
-              style={{
-                backgroundColor: 'var(--accent)',
-                opacity: 0.4,
-              }}
+              style={{ backgroundColor: '#ff8c42', opacity: 0.4 }}
             />
           </div>
           <h1
             className="text-xl font-bold tracking-widest"
             style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
           >
-            FORGE IDE
+            FORGE <span style={{ color: '#ff8c42' }}>ADMIN</span>
           </h1>
         </div>
 
@@ -145,18 +147,18 @@ export function RegisterForm() {
           className="text-2xl font-bold text-center mb-2"
           style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
         >
-          Create account
+          Admin Registration
         </h2>
         <p className="text-center mb-4 text-sm" style={labelStyle}>
-          Join the competitive coding arena
+          Create an admin account with invite code
         </p>
 
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-2 mb-6">
           <div
-            className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-all duration-300"
+            className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold"
             style={{
-              backgroundColor: 'var(--accent)',
+              backgroundColor: '#ff8c42',
               color: '#0a0a0a',
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
             }}
@@ -164,15 +166,13 @@ export function RegisterForm() {
             1
           </div>
           <div
-            className="h-px flex-1 max-w-[60px] transition-all duration-300"
-            style={{
-              backgroundColor: step === 2 ? 'var(--accent)' : 'var(--border-default)',
-            }}
+            className="h-px flex-1 max-w-[60px]"
+            style={{ backgroundColor: step === 2 ? '#ff8c42' : 'var(--border-default)' }}
           />
           <div
-            className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-all duration-300"
+            className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold"
             style={{
-              backgroundColor: step === 2 ? 'var(--accent)' : 'var(--bg-elevated)',
+              backgroundColor: step === 2 ? '#ff8c42' : 'var(--bg-elevated)',
               color: step === 2 ? '#0a0a0a' : 'var(--text-muted)',
               border: step === 2 ? 'none' : '1px solid var(--border-default)',
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
@@ -181,16 +181,6 @@ export function RegisterForm() {
             2
           </div>
         </div>
-
-        <p
-          className="text-center mb-6 text-[10px] tracking-widest uppercase"
-          style={{
-            ...labelStyle,
-            color: 'var(--text-muted)',
-          }}
-        >
-          {step === 1 ? 'Account Info' : 'Coding Handles'}
-        </p>
 
         {/* Server Error */}
         {serverError && (
@@ -218,29 +208,59 @@ export function RegisterForm() {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-5"
             >
+              {/* Invite Code */}
+              <div>
+                <label
+                  htmlFor="admin-invite"
+                  className="block mb-2 text-xs tracking-wider uppercase"
+                  style={labelStyle}
+                >
+                  <span style={{ color: '#ff8c42' }}>●</span> Invite Code
+                </label>
+                <input
+                  id="admin-invite"
+                  type="password"
+                  {...register('inviteCode')}
+                  className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
+                  style={inputStyle(!!errors.inviteCode)}
+                  onFocus={(e) => {
+                    if (!errors.inviteCode) e.target.style.borderColor = '#ff8c42';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.inviteCode) e.target.style.borderColor = 'var(--border-default)';
+                  }}
+                  placeholder="Enter invite code"
+                />
+                {errors.inviteCode && (
+                  <p className="mt-1 text-xs" style={{ color: '#ff4545' }}>
+                    {errors.inviteCode.message}
+                  </p>
+                )}
+              </div>
+
               {/* Username */}
               <div>
                 <label
-                  htmlFor="register-username"
+                  htmlFor="admin-username"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
                   Username
                 </label>
                 <input
-                  id="register-username"
+                  id="admin-username"
                   type="text"
                   autoComplete="username"
                   {...register('username')}
                   className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
                   style={inputStyle(!!errors.username)}
                   onFocus={(e) => {
-                    if (!errors.username) e.target.style.borderColor = 'var(--accent)';
+                    if (!errors.username) e.target.style.borderColor = '#ff8c42';
                   }}
                   onBlur={(e) => {
                     if (!errors.username) e.target.style.borderColor = 'var(--border-default)';
                   }}
-                  placeholder="your_username"
+                  placeholder="admin_username"
                 />
                 {errors.username && (
                   <p className="mt-1 text-xs" style={{ color: '#ff4545' }}>
@@ -252,26 +272,26 @@ export function RegisterForm() {
               {/* Email */}
               <div>
                 <label
-                  htmlFor="register-email"
+                  htmlFor="admin-email"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
                   Email
                 </label>
                 <input
-                  id="register-email"
+                  id="admin-email"
                   type="email"
                   autoComplete="email"
                   {...register('email')}
                   className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
                   style={inputStyle(!!errors.email)}
                   onFocus={(e) => {
-                    if (!errors.email) e.target.style.borderColor = 'var(--accent)';
+                    if (!errors.email) e.target.style.borderColor = '#ff8c42';
                   }}
                   onBlur={(e) => {
                     if (!errors.email) e.target.style.borderColor = 'var(--border-default)';
                   }}
-                  placeholder="you@example.com"
+                  placeholder="admin@example.com"
                 />
                 {errors.email && (
                   <p className="mt-1 text-xs" style={{ color: '#ff4545' }}>
@@ -283,7 +303,7 @@ export function RegisterForm() {
               {/* Password */}
               <div>
                 <label
-                  htmlFor="register-password"
+                  htmlFor="admin-password"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
@@ -291,14 +311,14 @@ export function RegisterForm() {
                 </label>
                 <div className="relative">
                   <input
-                    id="register-password"
+                    id="admin-password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     {...register('password')}
                     className="w-full px-4 py-3 pr-12 rounded-md text-[13px] outline-none transition-all duration-200"
                     style={inputStyle(!!errors.password)}
                     onFocus={(e) => {
-                      if (!errors.password) e.target.style.borderColor = 'var(--accent)';
+                      if (!errors.password) e.target.style.borderColor = '#ff8c42';
                     }}
                     onBlur={(e) => {
                       if (!errors.password) e.target.style.borderColor = 'var(--border-default)';
@@ -308,13 +328,11 @@ export function RegisterForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs transition-colors duration-200"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
                     style={{
                       color: 'var(--text-muted)',
                       fontFamily: 'var(--font-space-mono), Space Mono, monospace',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                   >
                     {showPassword ? 'HIDE' : 'SHOW'}
                   </button>
@@ -326,46 +344,24 @@ export function RegisterForm() {
                 )}
               </div>
 
-              {/* Confirm Password */}
+              {/* Confirm */}
               <div>
                 <label
-                  htmlFor="register-confirm"
+                  htmlFor="admin-confirm"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
                   Confirm Password
                 </label>
-                <div className="relative">
-                  <input
-                    id="register-confirm"
-                    type={showConfirm ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    {...register('confirmPassword')}
-                    className="w-full px-4 py-3 pr-12 rounded-md text-[13px] outline-none transition-all duration-200"
-                    style={inputStyle(!!errors.confirmPassword)}
-                    onFocus={(e) => {
-                      if (!errors.confirmPassword) e.target.style.borderColor = 'var(--accent)';
-                    }}
-                    onBlur={(e) => {
-                      if (!errors.confirmPassword)
-                        e.target.style.borderColor = 'var(--border-default)';
-                    }}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs transition-colors duration-200"
-                    style={{
-                      color: 'var(--text-muted)',
-                      fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                  >
-                    {showConfirm ? 'HIDE' : 'SHOW'}
-                  </button>
-                </div>
+                <input
+                  id="admin-confirm"
+                  type="password"
+                  autoComplete="new-password"
+                  {...register('confirmPassword')}
+                  className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
+                  style={inputStyle(!!errors.confirmPassword)}
+                  placeholder="••••••••"
+                />
                 {errors.confirmPassword && (
                   <p className="mt-1 text-xs" style={{ color: '#ff4545' }}>
                     {errors.confirmPassword.message}
@@ -373,19 +369,17 @@ export function RegisterForm() {
                 )}
               </div>
 
-              {/* Next Step */}
               <button
                 type="button"
                 onClick={handleNextStep}
                 className="w-full py-3 rounded-md text-sm font-bold tracking-widest uppercase transition-all duration-200"
                 style={{
-                  backgroundColor: 'var(--accent)',
+                  backgroundColor: '#ff8c42',
                   color: '#0a0a0a',
                   fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-                  letterSpacing: '1px',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 0 20px rgba(232, 255, 90, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 140, 66, 0.4)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = 'none';
@@ -401,42 +395,21 @@ export function RegisterForm() {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-5"
             >
-              {/* Info banner */}
-              <div
-                className="p-3 rounded-md text-[11px] leading-relaxed"
-                style={{
-                  backgroundColor: 'rgba(232, 255, 90, 0.08)',
-                  border: '1px solid rgba(232, 255, 90, 0.2)',
-                  color: 'var(--accent)',
-                  fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-                }}
-              >
-                Link your competitive programming handles to verify your identity and enable
-                leaderboard tracking.
-              </div>
-
-              {/* Codeforces Handle */}
+              {/* CF Handle */}
               <div>
                 <label
-                  htmlFor="register-cf"
+                  htmlFor="admin-cf"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
                   <span style={{ color: '#3b5998' }}>●</span> Codeforces Handle
                 </label>
                 <input
-                  id="register-cf"
+                  id="admin-cf"
                   type="text"
                   {...register('codeforcesHandle')}
                   className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
                   style={inputStyle(!!errors.codeforcesHandle)}
-                  onFocus={(e) => {
-                    if (!errors.codeforcesHandle) e.target.style.borderColor = '#3b5998';
-                  }}
-                  onBlur={(e) => {
-                    if (!errors.codeforcesHandle)
-                      e.target.style.borderColor = 'var(--border-default)';
-                  }}
                   placeholder="tourist"
                 />
                 {errors.codeforcesHandle && (
@@ -446,28 +419,21 @@ export function RegisterForm() {
                 )}
               </div>
 
-              {/* CodeChef Handle */}
+              {/* CC Handle */}
               <div>
                 <label
-                  htmlFor="register-cc"
+                  htmlFor="admin-cc"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
                   <span style={{ color: '#5B4638' }}>●</span> CodeChef Handle
                 </label>
                 <input
-                  id="register-cc"
+                  id="admin-cc"
                   type="text"
                   {...register('codechefHandle')}
                   className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
                   style={inputStyle(!!errors.codechefHandle)}
-                  onFocus={(e) => {
-                    if (!errors.codechefHandle) e.target.style.borderColor = '#5B4638';
-                  }}
-                  onBlur={(e) => {
-                    if (!errors.codechefHandle)
-                      e.target.style.borderColor = 'var(--border-default)';
-                  }}
                   placeholder="your_codechef_id"
                 />
                 {errors.codechefHandle && (
@@ -477,28 +443,21 @@ export function RegisterForm() {
                 )}
               </div>
 
-              {/* LeetCode Username */}
+              {/* LC Username */}
               <div>
                 <label
-                  htmlFor="register-lc"
+                  htmlFor="admin-lc"
                   className="block mb-2 text-xs tracking-wider uppercase"
                   style={labelStyle}
                 >
                   <span style={{ color: '#ffa116' }}>●</span> LeetCode Username
                 </label>
                 <input
-                  id="register-lc"
+                  id="admin-lc"
                   type="text"
                   {...register('leetcodeUsername')}
                   className="w-full px-4 py-3 rounded-md text-[13px] outline-none transition-all duration-200"
                   style={inputStyle(!!errors.leetcodeUsername)}
-                  onFocus={(e) => {
-                    if (!errors.leetcodeUsername) e.target.style.borderColor = '#ffa116';
-                  }}
-                  onBlur={(e) => {
-                    if (!errors.leetcodeUsername)
-                      e.target.style.borderColor = 'var(--border-default)';
-                  }}
                   placeholder="your_leetcode_id"
                 />
                 {errors.leetcodeUsername && (
@@ -508,46 +467,37 @@ export function RegisterForm() {
                 )}
               </div>
 
-              {/* Buttons */}
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="flex-1 py-3 rounded-md text-sm tracking-widest uppercase transition-all duration-200"
+                  className="flex-1 py-3 rounded-md text-sm tracking-widest uppercase"
                   style={{
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-primary)',
                     fontFamily: 'var(--font-space-mono), Space Mono, monospace',
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--accent)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-default)';
-                  }}
                 >
                   ← BACK
                 </button>
                 <button
-                  id="register-submit"
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-[2] py-3 rounded-md text-sm font-bold tracking-widest uppercase transition-all duration-200 disabled:opacity-50"
+                  className="flex-[2] py-3 rounded-md text-sm font-bold tracking-widest uppercase disabled:opacity-50"
                   style={{
-                    backgroundColor: 'var(--accent)',
+                    backgroundColor: '#ff8c42',
                     color: '#0a0a0a',
                     fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-                    letterSpacing: '1px',
                   }}
                   onMouseEnter={(e) => {
                     if (!isSubmitting)
-                      e.currentTarget.style.boxShadow = '0 0 20px rgba(232, 255, 90, 0.4)';
+                      e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 140, 66, 0.4)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
-                  {isSubmitting ? 'VERIFYING...' : 'CREATE ACCOUNT'}
+                  {isSubmitting ? 'CREATING...' : 'CREATE ADMIN'}
                 </button>
               </div>
             </motion.div>
@@ -563,11 +513,11 @@ export function RegisterForm() {
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
             }}
           >
-            Already have an account?{' '}
+            Already have an admin account?{' '}
             <Link
-              href="/login"
+              href="/admin/login"
               className="transition-colors duration-200"
-              style={{ color: 'var(--accent)' }}
+              style={{ color: '#ff8c42' }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
@@ -581,15 +531,14 @@ export function RegisterForm() {
               fontFamily: 'var(--font-space-mono), Space Mono, monospace',
             }}
           >
-            Admin?{' '}
+            Not an admin?{' '}
             <Link
-              href="/admin/register"
-              className="transition-colors duration-200"
-              style={{ color: 'var(--orange, #ff8c42)' }}
+              href="/register"
+              style={{ color: 'var(--accent)' }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
-              Register as admin
+              User register
             </Link>
           </p>
         </div>

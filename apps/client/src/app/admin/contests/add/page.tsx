@@ -1,9 +1,7 @@
 'use client';
 
-// ── Admin Add Contest ────────────────────────────
-
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ProtectedRoute } from '../../../../components/layout/ProtectedRoute';
 import api from '../../../../lib/axios';
@@ -15,6 +13,7 @@ export default function AddContestPage() {
 
   const [formData, setFormData] = useState({
     name: '',
+    type: 'NORMAL',
     platform: 'CODEFORCES',
     startTime: '',
     endTime: '',
@@ -22,13 +21,36 @@ export default function AddContestPage() {
     description: '',
   });
 
+  const [availableProblems, setAvailableProblems] = useState<any[]>([]);
+  const [selectedProblemIds, setSelectedProblemIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingProblems, setLoadingProblems] = useState(false);
 
   // Redirect non-admins
   if (user && user.role !== 'ADMIN') {
     router.replace('/club');
     return null;
   }
+
+  // Fetch problems when REVERSE_CODING is selected
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (formData.type === 'REVERSE_CODING') {
+      setLoadingProblems(true);
+      // Fetch problems specifically for reverse coding (CUSTOM platform, has reference solution)
+      api
+        .get('/api/problems?platform=CUSTOM&limit=100')
+        .then((res) => setAvailableProblems(res.data.problems || []))
+        .catch(console.error)
+        .finally(() => setLoadingProblems(false));
+    }
+  }, [formData.type]);
+
+  const toggleProblem = (id: string) => {
+    setSelectedProblemIds((prev) =>
+      prev.includes(id) ? prev.filter((pId) => pId !== id) : [...prev, id],
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +61,7 @@ export default function AddContestPage() {
         ...formData,
         startTime: new Date(formData.startTime).toISOString(),
         endTime: new Date(formData.endTime).toISOString(),
+        problemIds: formData.type === 'REVERSE_CODING' ? selectedProblemIds : undefined,
       };
 
       await api.post('/api/contests', payload);
@@ -62,17 +85,40 @@ export default function AddContestPage() {
             onSubmit={handleSubmit}
             className="flex flex-col gap-8 bg-bg-surface border border-border-default rounded-lg p-8"
           >
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-mono font-bold tracking-widest text-text-muted uppercase">
-                Contest Name *
-              </label>
-              <input
-                required
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-bg-elevated border border-border-default rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-mono font-bold tracking-widest text-text-muted uppercase">
+                  Contest Name *
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="bg-bg-elevated border border-border-default rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-mono font-bold tracking-widest text-text-muted uppercase">
+                  Contest Type *
+                </label>
+                <select
+                  required
+                  value={formData.type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      type: e.target.value,
+                      platform: e.target.value === 'REVERSE_CODING' ? 'CUSTOM' : formData.platform,
+                    })
+                  }
+                  className="bg-bg-elevated border border-border-default rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="NORMAL">Normal</option>
+                  <option value="REVERSE_CODING">Reverse Coding</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -83,7 +129,8 @@ export default function AddContestPage() {
                 required
                 value={formData.platform}
                 onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                className="bg-bg-elevated border border-border-default rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+                disabled={formData.type === 'REVERSE_CODING'}
+                className="bg-bg-elevated border border-border-default rounded px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent disabled:opacity-50"
               >
                 <option value="CODEFORCES">Codeforces</option>
                 <option value="ATCODER">AtCoder</option>
@@ -144,6 +191,52 @@ export default function AddContestPage() {
                 placeholder="Optional description..."
               />
             </div>
+
+            {/* Reverse Coding Problem Selection */}
+            {formData.type === 'REVERSE_CODING' && (
+              <div className="flex flex-col gap-4 border-t border-border-subtle pt-6">
+                <h3 className="text-sm font-bold tracking-widest text-text-primary uppercase font-mono">
+                  Select Reverse Coding Problems
+                </h3>
+                <p className="text-xs text-text-muted">
+                  Select the CUSTOM problems that will be part of this reverse coding contest.
+                  Ensure these problems have a reference solution set in the admin panel.
+                </p>
+
+                {loadingProblems ? (
+                  <div className="text-sm text-text-muted italic">Loading problems...</div>
+                ) : availableProblems.length === 0 ? (
+                  <div className="text-sm text-text-muted italic bg-bg-elevated p-4 rounded border border-border-default">
+                    No custom problems available. Create some in the admin panel first.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-60 overflow-y-auto custom-scrollbar border border-border-default rounded-md bg-bg-elevated p-2">
+                    {availableProblems.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-3 p-2 hover:bg-bg-surface rounded cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedProblemIds.includes(p.id)}
+                          onChange={() => toggleProblem(p.id)}
+                          className="w-4 h-4 accent-accent"
+                        />
+                        <div className="flex flex-col">
+                          <span className="text-sm text-text-primary font-medium">{p.title}</span>
+                          <span className="text-[10px] font-mono text-text-muted">
+                            {p.difficulty}
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className="text-xs text-text-muted font-mono">
+                  Selected: {selectedProblemIds.length} problem(s)
+                </div>
+              </div>
+            )}
 
             {/* Submit */}
             <div className="flex justify-end pt-4 border-t border-border-subtle">

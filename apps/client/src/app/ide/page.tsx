@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -227,23 +227,30 @@ function EditorContent() {
                     <div className="w-10 h-10 rounded-full border-2 border-border-subtle" />
                     <div className="absolute inset-0 w-10 h-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
                   </div>
-                  <p className="text-text-muted font-mono text-sm tracking-wider">CHECKING CONTEST STATUS...</p>
+                  <p className="text-text-muted font-mono text-sm tracking-wider">
+                    CHECKING CONTEST STATUS...
+                  </p>
                 </div>
               ) : (
                 <div className="text-center max-w-md">
                   <div className="text-4xl mb-4">🔒</div>
-                  <h2 className="text-2xl font-bold mb-2 tracking-wider" style={{ fontFamily: 'var(--font-syne)' }}>
+                  <h2
+                    className="text-2xl font-bold mb-2 tracking-wider"
+                    style={{ fontFamily: 'var(--font-syne)' }}
+                  >
                     NO LIVE CONTEST
                   </h2>
                   <p className="text-text-secondary mb-6 font-mono text-sm leading-relaxed">
                     The Forge IDE is only available during active contests.
                   </p>
-                  
+
                   {nextContest ? (
                     <div className="p-4 rounded border border-border-default bg-bg-elevated font-mono text-xs">
                       <p className="text-text-muted mb-1">NEXT CONTEST</p>
                       <p className="text-accent font-bold mb-1">{nextContest.name}</p>
-                      <p className="text-text-primary">Starts at: {new Date(nextContest.startTime).toLocaleString()}</p>
+                      <p className="text-text-primary">
+                        Starts at: {new Date(nextContest.startTime).toLocaleString()}
+                      </p>
                     </div>
                   ) : (
                     <div className="p-4 rounded border border-border-default bg-bg-elevated font-mono text-xs">

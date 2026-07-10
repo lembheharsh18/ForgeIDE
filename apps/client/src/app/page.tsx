@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+import { DailyProblemCard } from '../components/home/DailyProblemCard';
 import { useAuthStore } from '../store/authStore';
 import { useEditorStore } from '../store/editorStore';
-import { DailyProblemCard } from '../components/home/DailyProblemCard';
-import api from '../lib/axios';
 
 // ── Floating Navbar ──────────────────────────────
 
@@ -431,23 +430,27 @@ export default function Home() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthStore();
   const prefersReducedMotion = useReducedMotion();
-  
+
   const [topUsers, setTopUsers] = useState<any[]>([]);
   const [dailyProblems, setDailyProblems] = useState<any[]>([]);
   const [loadingDaily, setLoadingDaily] = useState(true);
 
   useEffect(() => {
-    // Fetch leaderboard
-    api.get('/api/leaderboard?sort=rating&platform=ALL')
-      .then(res => {
-        if (res.data?.entries) setTopUsers(res.data.entries.slice(0, 3));
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+    // Fetch leaderboard (public — use native fetch to avoid auth interceptor)
+    fetch(`${API_BASE}/api/leaderboard?sort=rating&platform=ALL`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (data?.entries) setTopUsers(data.entries.slice(0, 3));
       })
       .catch(() => {});
-      
-    // Fetch daily problems
-    api.get('/api/daily-problems')
-      .then(res => {
-        if (res.data?.success) setDailyProblems(res.data.data);
+
+    // Fetch daily problems (public — use native fetch)
+    fetch(`${API_BASE}/api/daily-problems`)
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (data?.success) setDailyProblems(data.data);
       })
       .catch(() => {})
       .finally(() => setLoadingDaily(false));
@@ -662,7 +665,9 @@ export default function Home() {
 
         <div className="flex flex-col gap-4">
           {topUsers.length === 0 ? (
-            <div className="text-center text-text-muted font-mono italic">Loading leaderboard...</div>
+            <div className="text-center text-text-muted font-mono italic">
+              Loading leaderboard...
+            </div>
           ) : (
             topUsers.map((user, i) => (
               <motion.div
@@ -686,13 +691,15 @@ export default function Home() {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold font-mono text-[#39ff8a]">{user.score}</div>
-                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-widest">Rating</div>
+                  <div className="text-[10px] text-text-muted font-mono uppercase tracking-widest">
+                    Rating
+                  </div>
                 </div>
               </motion.div>
             ))
           )}
         </div>
-        
+
         <div className="flex justify-center mt-8">
           <Link
             href="/leaderboard"

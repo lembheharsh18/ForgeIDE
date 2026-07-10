@@ -41,6 +41,7 @@ model User {
   codeforcesHandle  String?
   codechefHandle    String?
   leetcodeUsername  String?
+  handlesVerified   Boolean           @default(false)
   avatarUrl         String?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt

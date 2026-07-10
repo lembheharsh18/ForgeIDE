@@ -19,6 +19,7 @@ const createContestSchema = z.object({
   endTime: z.string().transform((s) => new Date(s)),
   link: z.string().url(),
   description: z.string().max(1000).optional(),
+  problemIds: z.array(z.string()).optional(),
 });
 
 // ── GET /api/contests ────────────────────────────
@@ -53,7 +54,7 @@ router.get('/', requireAuth, async (_req: Request, res: Response) => {
 router.get('/live', requireAuth, async (_req: Request, res: Response) => {
   try {
     const now = new Date();
-    
+
     // Find a contest that is currently running
     const liveContest = await prisma.contest.findFirst({
       where: {
@@ -62,9 +63,9 @@ router.get('/live', requireAuth, async (_req: Request, res: Response) => {
       },
       include: {
         problems: {
-          select: { id: true, title: true, difficulty: true, platform: true }
-        }
-      }
+          select: { id: true, title: true, difficulty: true, platform: true },
+        },
+      },
     });
 
     if (liveContest) {
@@ -80,13 +81,48 @@ router.get('/live', requireAuth, async (_req: Request, res: Response) => {
       orderBy: { startTime: 'asc' },
     });
 
-    res.json({ 
-      isLive: false, 
-      nextContest: nextContest ? { id: nextContest.id, startTime: nextContest.startTime, name: nextContest.name } : null 
+    res.json({
+      isLive: false,
+      nextContest: nextContest
+        ? { id: nextContest.id, startTime: nextContest.startTime, name: nextContest.name }
+        : null,
     });
   } catch (err) {
     console.error('[Contests] Live check error:', err);
     res.status(500).json({ error: 'Failed to check live contest' });
+  }
+});
+
+// ── GET /api/contests/:id ────────────────────────
+
+router.get('/:id', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const contest = await prisma.contest.findUnique({
+      where: { id: req.params.id },
+      include: {
+        problems: {
+          select: {
+            id: true,
+            title: true,
+            difficulty: true,
+            platform: true,
+            tags: true,
+            referenceLang: true,
+          },
+        },
+        _count: { select: { participants: true } },
+      },
+    });
+
+    if (!contest) {
+      res.status(404).json({ error: 'Contest not found' });
+      return;
+    }
+
+    res.json({ ...contest, participantCount: contest._count.participants });
+  } catch (err) {
+    console.error('[Contests] Get error:', err);
+    res.status(500).json({ error: 'Failed to fetch contest' });
   }
 });
 
@@ -105,6 +141,16 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
         endTime: body.endTime,
         link: body.link,
         description: body.description || null,
+        ...(body.problemIds && body.problemIds.length > 0
+          ? {
+              problems: {
+                connect: body.problemIds.map((id) => ({ id })),
+              },
+            }
+          : {}),
+      },
+      include: {
+        problems: { select: { id: true, title: true } },
       },
     });
 
@@ -152,6 +198,35 @@ router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
     }
     console.error('[Contests] Update error:', err);
     res.status(500).json({ error: 'Failed to update contest' });
+  }
+});
+
+// ── POST /api/contests/:id/problems ──────────────
+
+router.post('/:id/problems', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { problemIds } = z.object({ problemIds: z.array(z.string()).min(1) }).parse(req.body);
+
+    const contest = await prisma.contest.update({
+      where: { id: req.params.id },
+      data: {
+        problems: {
+          connect: problemIds.map((id) => ({ id })),
+        },
+      },
+      include: {
+        problems: { select: { id: true, title: true } },
+      },
+    });
+
+    res.json(contest);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation error', details: err.errors });
+      return;
+    }
+    console.error('[Contests] Add problems error:', err);
+    res.status(500).json({ error: 'Failed to add problems to contest' });
   }
 });
 

@@ -8,6 +8,8 @@ export interface User {
   email: string;
   role: 'MEMBER' | 'ADMIN';
   codeforcesHandle?: string | null;
+  codechefHandle?: string | null;
+  leetcodeUsername?: string | null;
   avatarUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
