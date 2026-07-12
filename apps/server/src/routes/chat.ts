@@ -1,8 +1,9 @@
-import { Router, Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import { Router } from 'express';
 import { AccessToken } from 'livekit-server-sdk';
+
 import { prisma } from '../config/db';
 import { requireAuth } from '../middleware/requireAuth';
-import { requireAdmin } from '../middleware/requireAdmin';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get('/rooms', requireAuth, async (req: Request, res: Response) => {
     let rooms = await prisma.chatRoom.findMany({
       orderBy: { createdAt: 'asc' },
     });
-    
+
     if (rooms.length === 0) {
       const general = await prisma.chatRoom.create({
         data: { name: 'General', description: 'General community discussion' },
@@ -29,13 +30,13 @@ router.get('/rooms', requireAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/chat/rooms
-// Create a new chat room (Admin only)
-router.post('/rooms', requireAdmin, async (req: Request, res: Response) => {
+// Create a new chat room (any authenticated user)
+router.post('/rooms', requireAuth, async (req: Request, res: Response) => {
   try {
     const { name, description } = req.body;
     if (!name || typeof name !== 'string') {
-       res.status(400).json({ success: false, message: 'Invalid room name' });
-       return;
+      res.status(400).json({ success: false, message: 'Invalid room name' });
+      return;
     }
 
     const room = await prisma.chatRoom.create({
@@ -45,8 +46,8 @@ router.post('/rooms', requireAdmin, async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Chat] Error creating room:', error);
     if (error.code === 'P2002') {
-       res.status(400).json({ success: false, message: 'Room name already exists' });
-       return;
+      res.status(400).json({ success: false, message: 'Room name already exists' });
+      return;
     }
     res.status(500).json({ success: false, message: 'Failed to create room' });
   }
@@ -62,7 +63,7 @@ router.get('/rooms/:roomId/messages', requireAuth, async (req: Request, res: Res
       take: 50,
       orderBy: { createdAt: 'desc' }, // Latest first
       include: {
-        user: { select: { username: true, avatarUrl: true, role: true } },
+        user: { select: { username: true, avatarUrl: true } },
       },
     });
 
@@ -75,10 +76,22 @@ router.get('/rooms/:roomId/messages', requireAuth, async (req: Request, res: Res
 });
 
 // DELETE /api/chat/messages/:msgId
-// Soft-delete a message (Admin only)
-router.delete('/messages/:msgId', requireAdmin, async (req: Request, res: Response) => {
+// Soft-delete own message only
+router.delete('/messages/:msgId', requireAuth, async (req: Request, res: Response) => {
   try {
     const { msgId } = req.params;
+
+    // Only allow users to delete their own messages
+    const message = await prisma.chatMessage.findUnique({ where: { id: msgId } });
+    if (!message) {
+      res.status(404).json({ success: false, message: 'Message not found' });
+      return;
+    }
+    if (message.userId !== req.user!.userId) {
+      res.status(403).json({ success: false, message: 'You can only delete your own messages' });
+      return;
+    }
+
     await prisma.chatMessage.update({
       where: { id: msgId },
       data: { deletedAt: new Date() },
@@ -115,7 +128,7 @@ router.post('/livekit-token', requireAuth, async (req: Request, res: Response) =
       identity: user.username,
       name: user.username,
     });
-    
+
     // Set permissions
     at.addGrant({ roomJoin: true, room: roomId, canPublish: true, canSubscribe: true });
 

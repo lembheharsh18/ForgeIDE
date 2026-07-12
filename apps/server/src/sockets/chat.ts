@@ -1,4 +1,5 @@
-import { Server, Socket } from 'socket.io';
+import type { Server, Socket } from 'socket.io';
+
 import { prisma } from '../config/db';
 import { verifyAccessToken } from '../utils/jwt';
 
@@ -16,7 +17,7 @@ interface ChatClientToServerEvents {
   'join-room': (roomId: string) => void;
   'leave-room': (roomId: string) => void;
   'send-message': (payload: { roomId: string; content: string }) => void;
-  'delete-message': (msgId: string) => void; // admin only
+  'delete-message': (msgId: string) => void;
   'whiteboard-update': (payload: { roomId: string; data: any }) => void;
 }
 
@@ -27,7 +28,7 @@ export function initChatNamespace(io: Server) {
     try {
       const token = socket.handshake.auth?.token;
       if (!token) return next(new Error('Authentication error'));
-      
+
       const payload = verifyAccessToken(token);
       socket.data.user = payload;
       next();
@@ -42,12 +43,12 @@ export function initChatNamespace(io: Server) {
     socket.on('join-room', async (roomId) => {
       socket.join(roomId);
       socket.to(roomId).emit('user-joined', user.username);
-      
+
       // Load whiteboard data for this room
       try {
         const room = await prisma.chatRoom.findUnique({
           where: { id: roomId },
-          select: { whiteboardData: true }
+          select: { whiteboardData: true },
         });
         if (room?.whiteboardData) {
           socket.emit('whiteboard-load', room.whiteboardData);
@@ -69,11 +70,11 @@ export function initChatNamespace(io: Server) {
         const message = await prisma.chatMessage.create({
           data: {
             roomId,
-            userId: user.id,
+            userId: user.userId,
             content: content.trim(),
           },
           include: {
-            user: { select: { username: true, avatarUrl: true, role: true } },
+            user: { select: { username: true, avatarUrl: true } },
           },
         });
 
@@ -86,12 +87,18 @@ export function initChatNamespace(io: Server) {
 
     socket.on('delete-message', async (msgId) => {
       try {
-        if (user.role !== 'ADMIN') {
-          socket.emit('error', 'Unauthorized');
+        // Only allow users to delete their own messages
+        const msg = await prisma.chatMessage.findUnique({ where: { id: msgId } });
+        if (!msg) {
+          socket.emit('error', 'Message not found');
+          return;
+        }
+        if (msg.userId !== user.userId) {
+          socket.emit('error', 'You can only delete your own messages');
           return;
         }
 
-        const msg = await prisma.chatMessage.update({
+        await prisma.chatMessage.update({
           where: { id: msgId },
           data: { deletedAt: new Date() },
         });
@@ -106,7 +113,7 @@ export function initChatNamespace(io: Server) {
     socket.on('whiteboard-update', async ({ roomId, data }) => {
       // Broadcast to others in the room
       socket.to(roomId).emit('whiteboard-update', data);
-      
+
       // Persist to DB (debouncing happens on client side, but we update the DB here)
       try {
         await prisma.chatRoom.update({

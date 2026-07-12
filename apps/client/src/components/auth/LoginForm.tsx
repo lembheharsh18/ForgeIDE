@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { GoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -238,6 +239,34 @@ export function LoginForm() {
           </button>
         </form>
 
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px bg-[var(--border-default)]" />
+          <span className="text-xs text-[var(--text-muted)] font-mono tracking-widest">OR</span>
+          <div className="flex-1 h-px bg-[var(--border-default)]" />
+        </div>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              try {
+                const res = await api.post('/api/auth/google', {
+                  credential: credentialResponse.credential,
+                });
+                setAuth(res.data.user, res.data.accessToken);
+                router.push('/club');
+              } catch (err: any) {
+                setServerError(err.response?.data?.message || 'Google Login failed.');
+              }
+            }}
+            onError={() => {
+              setServerError('Google Login failed.');
+            }}
+            theme="filled_black"
+            text="signin_with"
+            shape="rectangular"
+          />
+        </div>
+
         {/* Link to Register */}
         <div className="mt-6 space-y-2">
           <p
@@ -256,24 +285,6 @@ export function LoginForm() {
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
               Register
-            </Link>
-          </p>
-          <p
-            className="text-center text-[11px]"
-            style={{
-              color: 'var(--text-muted)',
-              fontFamily: 'var(--font-space-mono), Space Mono, monospace',
-            }}
-          >
-            Admin?{' '}
-            <Link
-              href="/admin/login"
-              className="transition-colors duration-200"
-              style={{ color: 'var(--orange, #ff8c42)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-            >
-              Login as admin
             </Link>
           </p>
         </div>

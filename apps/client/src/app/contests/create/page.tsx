@@ -1,0 +1,164 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import api from '../../../lib/axios';
+
+export default function CreateContestPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    title: '',
+    startTime: '',
+    durationMinutes: 120,
+    platform: 'CODEFORCES',
+    link: '',
+    description: '',
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const start = new Date(formData.startTime);
+      const end = new Date(start.getTime() + formData.durationMinutes * 60000);
+
+      await api.post('/api/contests', {
+        name: formData.title,
+        platform: formData.platform,
+        link: formData.link,
+        description: formData.description,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+      });
+      router.push('/contests');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to create contest');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen p-8" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="max-w-2xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-8 rounded-lg"
+          style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+        >
+          <h1 className="text-2xl font-bold mb-6 font-syne">Create Contest</h1>
+
+          {error && (
+            <div className="mb-6 p-3 rounded text-sm bg-red-500/10 text-red-500 font-mono border border-red-500/20">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 font-mono">
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Title</label>
+              <input
+                required
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full p-2.5 rounded text-sm bg-bg-elevated border border-border-default focus:border-accent outline-none transition-colors"
+                placeholder="e.g. Weekly Codeforces Contest"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Start Time</label>
+                <input
+                  required
+                  type="datetime-local"
+                  value={formData.startTime}
+                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                  className="w-full p-2.5 rounded text-sm bg-bg-elevated border border-border-default focus:border-accent outline-none transition-colors"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Duration (minutes)</label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  value={formData.durationMinutes}
+                  onChange={(e) =>
+                    setFormData({ ...formData, durationMinutes: Number(e.target.value) })
+                  }
+                  className="w-full p-2.5 rounded text-sm bg-bg-elevated border border-border-default focus:border-accent outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Platform</label>
+                <select
+                  value={formData.platform}
+                  onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                  className="w-full p-2.5 rounded text-sm bg-bg-elevated border border-border-default focus:border-accent outline-none transition-colors"
+                >
+                  <option value="CODEFORCES">Codeforces</option>
+                  <option value="CODECHEF">CodeChef</option>
+                  <option value="LEETCODE">LeetCode</option>
+                  <option value="ATCODER">AtCoder</option>
+                  <option value="CUSTOM">Custom / Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Contest Link</label>
+                <input
+                  required
+                  type="url"
+                  value={formData.link}
+                  onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+                  className="w-full p-2.5 rounded text-sm bg-bg-elevated border border-border-default focus:border-accent outline-none transition-colors"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Description (Optional)</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full p-2.5 rounded text-sm bg-bg-elevated border border-border-default focus:border-accent outline-none transition-colors resize-y min-h-[100px]"
+                placeholder="Additional details..."
+              />
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-4 py-2 rounded text-sm border border-border-default hover:bg-bg-hover transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 rounded text-sm font-bold bg-accent text-[#0a0a0a] hover:bg-[#2ae075] transition-colors disabled:opacity-50"
+              >
+                {isLoading ? 'Creating...' : 'Create Contest'}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

@@ -4,7 +4,6 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 
 import { prisma } from '../config/db';
-import { requireAdmin } from '../middleware/requireAdmin';
 import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
@@ -30,6 +29,7 @@ router.get('/', requireAuth, async (_req: Request, res: Response) => {
       orderBy: { startTime: 'asc' },
       include: {
         _count: { select: { participants: true } },
+        createdBy: { select: { username: true } },
       },
     });
 
@@ -111,6 +111,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
           },
         },
         _count: { select: { participants: true } },
+        createdBy: { select: { username: true } },
       },
     });
 
@@ -127,8 +128,9 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
 });
 
 // ── POST /api/contests ───────────────────────────
+// Any authenticated user can create a contest
 
-router.post('/', requireAdmin, async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = createContestSchema.parse(req.body);
 
@@ -141,6 +143,7 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
         endTime: body.endTime,
         link: body.link,
         description: body.description || null,
+        createdById: req.user!.userId,
         ...(body.problemIds && body.problemIds.length > 0
           ? {
               problems: {
@@ -167,7 +170,7 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
 
 // ── PUT /api/contests/:id ────────────────────────
 
-router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const existing = await prisma.contest.findUnique({ where: { id: req.params.id } });
     if (!existing) {
@@ -201,9 +204,32 @@ router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
   }
 });
 
+// ── POST /api/contests/:id/join ──────────────────
+
+router.post('/:id/join', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const contest = await prisma.contest.update({
+      where: { id: req.params.id },
+      data: {
+        participants: {
+          connect: { id: req.user!.userId },
+        },
+      },
+      include: {
+        _count: { select: { participants: true } },
+      },
+    });
+
+    res.json({ message: 'Joined contest', participantCount: contest._count.participants });
+  } catch (err) {
+    console.error('[Contests] Join error:', err);
+    res.status(500).json({ error: 'Failed to join contest' });
+  }
+});
+
 // ── POST /api/contests/:id/problems ──────────────
 
-router.post('/:id/problems', requireAdmin, async (req: Request, res: Response) => {
+router.post('/:id/problems', requireAuth, async (req: Request, res: Response) => {
   try {
     const { problemIds } = z.object({ problemIds: z.array(z.string()).min(1) }).parse(req.body);
 

@@ -6,23 +6,15 @@ import { Providers } from './providers';
 // ── SEO Metadata ─────────────────────────────────
 
 export const metadata: Metadata = {
-  title: 'Forge IDE — Competitive Programming Platform',
+  title: 'Coders League — Competitive Programming Hub',
   description:
     'Write, run, and debug competitive programming solutions in your browser. RC Interactor, CF integration, club leaderboards.',
   icons: {
     icon: '/favicon.ico',
   },
-  keywords: [
-    'competitive programming',
-    'coding',
-    'PICT',
-    'Coders League',
-    'IDE',
-    'Codeforces',
-    'Forge IDE',
-  ],
+  keywords: ['competitive programming', 'coding', 'PICT', 'Coders League', 'IDE', 'Codeforces'],
   openGraph: {
-    title: 'Forge IDE',
+    title: 'Coders League',
     description:
       'Write, run, and debug competitive programming solutions in your browser. RC Interactor, CF integration, club leaderboards.',
     type: 'website',

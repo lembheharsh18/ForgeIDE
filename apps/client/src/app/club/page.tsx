@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { ContestReminders } from '../../components/dashboard/ContestReminders';
 import { ProtectedRoute } from '../../components/layout/ProtectedRoute';
 import { Topbar } from '../../components/layout/Topbar';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -227,37 +228,8 @@ export default function ClubHomePage() {
               )}
             </Widget>
 
-            <Widget
-              title="Contest Reminders"
-              source={homeData?.contestReminders.source}
-              message={homeData?.contestReminders.message}
-              isLoading={isLoading}
-            >
-              {homeData?.contestReminders.items.length ? (
-                <div className="space-y-3">
-                  {homeData.contestReminders.items.map((contest) => (
-                    <a
-                      key={`${contest.platform}-${contest.url}`}
-                      href={contest.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded border border-border-subtle p-3 transition-colors hover:border-accent"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold">{contest.title}</span>
-                        <span className="font-mono text-[10px] text-text-muted">
-                          {contest.platform}
-                        </span>
-                      </div>
-                      <span className="mt-2 block text-xs text-text-muted">
-                        {new Date(contest.startTime).toLocaleString()}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState>No external contest reminders are available yet.</EmptyState>
-              )}
+            <Widget title="Contest Reminders" isLoading={false}>
+              <ContestReminders />
             </Widget>
 
             <Widget

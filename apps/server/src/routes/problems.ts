@@ -7,7 +7,6 @@ import { z } from 'zod';
 
 import { prisma } from '../config/db';
 import { redis } from '../config/redis';
-import { requireAdmin } from '../middleware/requireAdmin';
 import { requireAuth } from '../middleware/requireAuth';
 import { scrapeCFProblem, CFError } from '../services/cfScraper';
 
@@ -223,7 +222,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
       res.status(404).json({ error: 'Problem not found' });
       return;
     }
-    
+
     // Omit reference solution so clients can't cheat
     const { referenceSolution, ...safeProblem } = problem;
 
@@ -240,7 +239,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
 
 // ── POST /api/problems ───────────────────────────
 
-router.post('/', requireAdmin, async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const body = createProblemSchema.parse(req.body);
 
@@ -303,7 +302,7 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
 
 // ── PUT /api/problems/:id ────────────────────────
 
-router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
+router.put('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const existing = await prisma.problem.findUnique({ where: { id: req.params.id } });
     if (!existing) {
@@ -348,7 +347,7 @@ router.put('/:id', requireAdmin, async (req: Request, res: Response) => {
 
 // ── DELETE /api/problems/:id ─────────────────────
 
-router.delete('/:id', requireAdmin, async (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     await prisma.problem.delete({ where: { id: req.params.id } });
     await invalidateProblemsCache();

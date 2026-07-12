@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { Router } from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 
 import { COOKIE_OPTIONS } from '../config/constants';
@@ -13,6 +14,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { hashPassword, comparePassword } from '../utils/password';
 
 const router = Router();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ── Zod Schemas ──────────────────────────────────
 
@@ -31,10 +33,6 @@ const registerSchema = z.object({
   codeforcesHandle: z.string().min(1, 'Codeforces handle is required'),
   codechefHandle: z.string().min(1, 'CodeChef handle is required'),
   leetcodeUsername: z.string().min(1, 'LeetCode username is required'),
-});
-
-const adminRegisterSchema = registerSchema.extend({
-  inviteCode: z.string().min(1, 'Invite code is required'),
 });
 
 const loginSchema = z.object({
@@ -165,7 +163,6 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
     };
 
     const accessToken = generateAccessToken(payload);
@@ -179,7 +176,6 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
         codeforcesHandle: user.codeforcesHandle,
         codechefHandle: user.codechefHandle,
         leetcodeUsername: user.leetcodeUsername,
@@ -191,136 +187,6 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to register user',
-    });
-  }
-});
-
-// ── POST /api/auth/register-admin ────────────────
-
-router.post('/register-admin', authLimiter, async (req: Request, res: Response) => {
-  try {
-    const validation = adminRegisterSchema.safeParse(req.body);
-
-    if (!validation.success) {
-      res.status(400).json({
-        error: 'Validation failed',
-        details: validation.error.flatten().fieldErrors,
-      });
-      return;
-    }
-
-    const {
-      username,
-      email,
-      password,
-      codeforcesHandle,
-      codechefHandle,
-      leetcodeUsername,
-      inviteCode,
-    } = validation.data;
-
-    // Verify invite code
-    const expectedCode = process.env.ADMIN_INVITE_CODE || 'forge-admin-2024';
-    if (inviteCode !== expectedCode) {
-      res.status(403).json({
-        error: 'Forbidden',
-        message: 'Invalid invite code',
-      });
-      return;
-    }
-
-    // Check uniqueness
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ username }, { email }],
-      },
-    });
-
-    if (existingUser) {
-      const field = existingUser.username === username ? 'username' : 'email';
-      res.status(409).json({
-        error: 'Conflict',
-        message: `A user with this ${field} already exists`,
-      });
-      return;
-    }
-
-    // Verify coding handles
-    const handleCheck = await verifyHandles(codeforcesHandle, codechefHandle, leetcodeUsername);
-    if (!handleCheck.valid) {
-      res.status(400).json({
-        error: 'Handle verification failed',
-        message: handleCheck.errors.join('; '),
-        details: { handleErrors: handleCheck.errors },
-      });
-      return;
-    }
-
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
-    // Create admin user
-    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const newUser = await tx.user.create({
-        data: {
-          username,
-          email,
-          passwordHash,
-          role: 'ADMIN',
-          codeforcesHandle,
-          codechefHandle,
-          leetcodeUsername,
-          handlesVerified: true,
-        },
-      });
-
-      await tx.leaderboardEntry.create({
-        data: {
-          userId: newUser.id,
-          score: 0,
-          solvedCount: 0,
-          rank: 0,
-        },
-      });
-
-      await tx.platformProfileCache.create({
-        data: {
-          userId: newUser.id,
-        },
-      });
-
-      return newUser;
-    });
-
-    // Generate tokens
-    const payload: TokenPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    const accessToken = generateAccessToken(payload);
-    const refreshToken = generateRefreshToken(payload);
-
-    res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
-
-    res.status(201).json({
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        codeforcesHandle: user.codeforcesHandle,
-        codechefHandle: user.codechefHandle,
-        leetcodeUsername: user.leetcodeUsername,
-      },
-      accessToken,
-    });
-  } catch (error) {
-    console.error('[Auth] Admin register error:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: 'Failed to register admin',
     });
   }
 });
@@ -369,7 +235,6 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     const payload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
     };
 
     const accessToken = generateAccessToken(payload);
@@ -383,7 +248,6 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
         codeforcesHandle: user.codeforcesHandle,
         codechefHandle: user.codechefHandle,
         leetcodeUsername: user.leetcodeUsername,
@@ -440,7 +304,6 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const newPayload: TokenPayload = {
       userId: user.id,
       email: user.email,
-      role: user.role,
     };
 
     const accessToken = generateAccessToken(newPayload);
@@ -478,7 +341,6 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
         id: true,
         username: true,
         email: true,
-        role: true,
         codeforcesHandle: true,
         codechefHandle: true,
         leetcodeUsername: true,
@@ -547,7 +409,6 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
         id: true,
         username: true,
         email: true,
-        role: true,
         codeforcesHandle: true,
         codechefHandle: true,
         leetcodeUsername: true,
@@ -561,6 +422,106 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to update profile',
+    });
+  }
+});
+
+// ── POST /api/auth/google ────────────────────────
+router.post('/google', async (req: Request, res: Response) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      res.status(400).json({ error: 'Missing credential' });
+      return;
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.status(400).json({ error: 'Invalid token payload' });
+      return;
+    }
+
+    const { email, name, picture } = payload;
+
+    // Find existing user
+    let user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Create new user
+      const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'user';
+      let username = baseUsername;
+      let counter = 1;
+
+      while (await prisma.user.findUnique({ where: { username } })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
+      user = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            username,
+            email,
+            avatarUrl: picture,
+            handlesVerified: false,
+          },
+        });
+
+        await tx.leaderboardEntry.create({
+          data: {
+            userId: newUser.id,
+            score: 0,
+            solvedCount: 0,
+            rank: 0,
+          },
+        });
+
+        await tx.platformProfileCache.create({
+          data: {
+            userId: newUser.id,
+          },
+        });
+
+        return newUser;
+      });
+    }
+
+    // Generate tokens
+    const jwtPayload: TokenPayload = {
+      userId: user.id,
+      email: user.email,
+    };
+
+    const accessToken = generateAccessToken(jwtPayload);
+    const refreshToken = generateRefreshToken(jwtPayload);
+
+    // Set refresh token as httpOnly cookie
+    res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
+
+    res.status(200).json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        codeforcesHandle: user.codeforcesHandle,
+        codechefHandle: user.codechefHandle,
+        leetcodeUsername: user.leetcodeUsername,
+        avatarUrl: user.avatarUrl,
+      },
+      accessToken,
+    });
+  } catch (error) {
+    console.error('[Auth] Google OAuth error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to authenticate with Google',
     });
   }
 });

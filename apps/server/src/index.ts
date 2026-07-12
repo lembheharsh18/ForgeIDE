@@ -14,13 +14,15 @@ import cfRoutes from './routes/cf';
 import chatRoutes from './routes/chat';
 import clubRoutes from './routes/club';
 import contestRoutes from './routes/contests';
+import dailyProblemsRoutes from './routes/dailyProblems';
 import executeRoutes from './routes/execute';
+import forumRoutes from './routes/forum';
 import leaderboardRoutes from './routes/leaderboard';
 import problemRoutes from './routes/problems';
+import remindersRoutes from './routes/reminders';
 import reverseCodeRoutes from './routes/reverseCode';
 import submissionRoutes from './routes/submissions';
 import userRoutes from './routes/users';
-import dailyProblemsRoutes from './routes/dailyProblems';
 import { initSocketServer } from './sockets';
 
 dotenv.config({ path: '../../.env' });
@@ -90,6 +92,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/reverse-code', reverseCodeRoutes);
 app.use('/api/daily-problems', dailyProblemsRoutes);
+app.use('/api/forum', forumRoutes);
+app.use('/api/reminders', remindersRoutes);
 
 // ── Global Error Handler ─────────────────────────
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

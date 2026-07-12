@@ -6,7 +6,6 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'MEMBER' | 'ADMIN';
   codeforcesHandle?: string | null;
   codechefHandle?: string | null;
   leetcodeUsername?: string | null;

@@ -44,6 +44,7 @@ export function RCInteractor() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [exitCode, setExitCode] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -231,9 +232,9 @@ export function RCInteractor() {
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className="flex flex-col"
       style={{
-        position: 'absolute',
+        position: isFullscreen ? 'fixed' : 'absolute',
         inset: 0,
-        zIndex: 20,
+        zIndex: isFullscreen ? 9999 : 20,
         backgroundColor: 'var(--bg-primary)',
       }}
     >
@@ -290,26 +291,47 @@ export function RCInteractor() {
           </span>
         </div>
 
-        {/* Right: Close button */}
-        <button
-          onClick={handleClose}
-          className="flex items-center gap-1.5 px-3 py-1 rounded text-xs transition-all duration-150"
-          style={{
-            fontFamily: "'Space Mono', monospace",
-            border: '1px solid var(--border-default)',
-            color: 'var(--text-muted)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--red)';
-            e.currentTarget.style.color = 'var(--red)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--border-default)';
-            e.currentTarget.style.color = 'var(--text-muted)';
-          }}
-        >
-          ✕ CLOSE
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded text-xs transition-all duration-150"
+            style={{
+              fontFamily: "'Space Mono', monospace",
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-muted)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--text-primary)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
+          >
+            {isFullscreen ? '↙ EXIT FULLSCREEN' : '↗ FULLSCREEN'}
+          </button>
+
+          <button
+            onClick={handleClose}
+            className="flex items-center gap-1.5 px-3 py-1 rounded text-xs transition-all duration-150"
+            style={{
+              fontFamily: "'Space Mono', monospace",
+              border: '1px solid var(--border-default)',
+              color: 'var(--text-muted)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--red)';
+              e.currentTarget.style.color = 'var(--red)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
+          >
+            ✕ CLOSE
+          </button>
+        </div>
       </div>
 
       {/* ── Info Banner ────────────────────────── */}

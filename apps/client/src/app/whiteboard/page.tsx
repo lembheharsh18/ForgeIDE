@@ -28,11 +28,10 @@ interface Message {
   user: {
     username: string;
     avatarUrl: string | null;
-    role: string;
   };
 }
 
-export default function CommunityPage() {
+export default function WhiteboardPage() {
   const { user, accessToken } = useAuthStore();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
@@ -102,6 +101,7 @@ export default function CommunityPage() {
       newSocket.emit('leave-room', activeRoom.id);
       newSocket.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, activeRoom?.id]);
 
   const handleSend = (e: React.FormEvent) => {
@@ -113,7 +113,7 @@ export default function CommunityPage() {
   };
 
   const handleDelete = (msgId: string) => {
-    if (!socket || user?.role !== 'ADMIN') return;
+    if (!socket) return;
     socket.emit('delete-message', msgId);
   };
 
@@ -223,9 +223,9 @@ export default function CommunityPage() {
                         >
                           {msg.user.username}
                         </span>
-                        {msg.user.role === 'ADMIN' && (
+                        {msg.userId === user?.id && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 font-mono">
-                            ADMIN
+                            YOU
                           </span>
                         )}
                         <span className="text-[10px] text-text-muted font-mono ml-1">
@@ -259,8 +259,8 @@ export default function CommunityPage() {
                         )}
                       </div>
 
-                      {/* Admin Delete Button */}
-                      {!msg.deletedAt && user?.role === 'ADMIN' && (
+                      {/* Delete Button (Own Message Only) */}
+                      {!msg.deletedAt && isMe && (
                         <button
                           onClick={() => handleDelete(msg.id)}
                           className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-bg-hover text-text-muted hover:text-red-500"

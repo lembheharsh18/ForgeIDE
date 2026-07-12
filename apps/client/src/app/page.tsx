@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-import { DailyProblemCard } from '../components/home/DailyProblemCard';
 import { useAuthStore } from '../store/authStore';
 import { useEditorStore } from '../store/editorStore';
 
@@ -46,7 +45,7 @@ function LandingNav() {
         style={{ height: '56px' }}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group" aria-label="Forge IDE Home">
+        <Link href="/" className="flex items-center gap-2.5 group" aria-label="Coders League Home">
           <div className="relative">
             <div
               className="w-2.5 h-2.5 rounded-full"
@@ -63,37 +62,12 @@ function LandingNav() {
             className="text-sm font-extrabold tracking-widest"
             style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
           >
-            FORGE<span style={{ opacity: 0.4 }}>IDE</span>
+            CODERS<span style={{ opacity: 0.4 }}>LEAGUE</span>
           </span>
         </Link>
 
         {/* Nav + Auth */}
         <div className="flex items-center gap-4">
-          <nav className="hidden md:flex items-center gap-4">
-            {[
-              { label: 'IDE', href: '/ide' },
-              { label: 'CLUB', href: '/club' },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-xs transition-colors duration-150"
-                style={{
-                  fontFamily: "'Space Mono', monospace",
-                  color: 'var(--text-muted)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
           {!isAuthenticated && (
             <div className="flex items-center gap-2">
               <Link
@@ -128,7 +102,7 @@ function LandingNav() {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                REGISTER
+                JOIN NOW
               </Link>
             </div>
           )}
@@ -219,12 +193,8 @@ function TypingCodeBlock() {
     return () => clearInterval(blink);
   }, [cursorVisible]);
 
-  // Basic syntax highlighting — HTML-escape first to prevent XSS / broken rendering
   const highlightCode = useCallback((code: string) => {
-    // 1. Escape HTML entities FIRST
     const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    // 2. Apply syntax highlighting on safe text
     return escaped
       .replace(
         /\b(#include|using|namespace|int|void|auto|while|if|else|for|return|vector|cout|cin|endl)\b/g,
@@ -248,7 +218,6 @@ function TypingCodeBlock() {
           border: '1px solid var(--border-default)',
         }}
       >
-        {/* Window bar */}
         <div
           className="flex items-center gap-2 px-4"
           style={{
@@ -273,7 +242,6 @@ function TypingCodeBlock() {
           </span>
         </div>
 
-        {/* Code area */}
         <div className="relative p-4 overflow-x-auto" style={{ minHeight: '280px' }}>
           <pre
             className="text-[12px] leading-relaxed"
@@ -288,8 +256,6 @@ function TypingCodeBlock() {
                 (cursorVisible ? '<span style="color:var(--accent);animation:none">▌</span>' : ''),
             }}
           />
-
-          {/* Verdict badge */}
           {showVerdict && (
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -383,44 +349,41 @@ function FeatureCard({ icon, title, description, accentColor, index }: FeatureCa
 
 const FEATURES = [
   {
+    icon: '🏆',
+    title: 'NORMAL CONTESTS',
+    description: 'Host and track standard Codeforces contests with live leaderboard fetching.',
+    accentColor: 'var(--blue)',
+  },
+  {
     icon: '⚡',
-    title: 'RC INTERACTOR',
+    title: 'REVERSE CODING',
     description:
       'Test interactive problems in real-time. Play the judge role — your program responds live.',
     accentColor: 'var(--orange)',
   },
   {
-    icon: '🔗',
-    title: 'CF BRIDGE',
-    description:
-      'One-click to open any Codeforces problem in Forge. Submit directly and track your verdict.',
-    accentColor: 'var(--blue)',
-  },
-  {
-    icon: '🏆',
-    title: 'CLUB PORTAL',
-    description:
-      'Leaderboards, contests, problem sets, and submission history — all for your team.',
-    accentColor: 'var(--accent)',
-  },
-  {
-    icon: '🌐',
-    title: '5 LANGUAGES',
-    description:
-      'C++17, Python 3, Java 17, JavaScript, and Go. Powered by Piston for instant execution.',
+    icon: '📅',
+    title: 'CONTEST REMINDERS',
+    description: 'Never miss an upcoming contest. Get timely notifications and reminders.',
     accentColor: 'var(--green)',
   },
   {
     icon: '📊',
-    title: 'REAL ANALYTICS',
-    description: 'Track every submission. Watch your rank climb. Heatmap of your activity history.',
+    title: 'GLOBAL LEADERBOARD',
+    description: 'Track your rating across Codeforces, LeetCode, CodeChef, and local contests.',
+    accentColor: 'var(--accent)',
+  },
+  {
+    icon: '✏️',
+    title: 'COLLAB WHITEBOARD',
+    description: 'Real-time infinite canvas to discuss and explain complex algorithms with peers.',
     accentColor: '#c792ea',
   },
   {
-    icon: '🛡',
-    title: 'SANDBOXED',
-    description: 'Safe, isolated execution. No installs needed. Run code directly in your browser.',
-    accentColor: 'var(--text-muted)',
+    icon: '❓',
+    title: 'DOUBT FORUM',
+    description: 'Get help with competitive programming questions, code debugging, and logic gaps.',
+    accentColor: 'var(--red)',
   },
 ];
 
@@ -432,47 +395,34 @@ export default function Home() {
   const prefersReducedMotion = useReducedMotion();
 
   const [topUsers, setTopUsers] = useState<any[]>([]);
-  const [dailyProblems, setDailyProblems] = useState<any[]>([]);
-  const [loadingDaily, setLoadingDaily] = useState(true);
 
   useEffect(() => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-    // Fetch leaderboard (public — use native fetch to avoid auth interceptor)
     fetch(`${API_BASE}/api/leaderboard?sort=rating&platform=ALL`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         if (data?.entries) setTopUsers(data.entries.slice(0, 3));
       })
       .catch(() => {});
-
-    // Fetch daily problems (public — use native fetch)
-    fetch(`${API_BASE}/api/daily-problems`)
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        if (data?.success) setDailyProblems(data.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingDaily(false));
   }, []);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace('/club');
+      router.replace('/contests');
     }
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) return null;
   if (isAuthenticated) return null;
 
-  const heroLetters = 'FORGE IDE'.split('');
+  const heroLetters = 'CODERS LEAGUE'.split('');
 
   return (
     <main
       className="min-h-screen"
       style={{ backgroundColor: 'var(--bg-primary)', overflow: 'hidden' }}
     >
-      {/* Floating Navbar */}
       <LandingNav />
 
       {/* ── Hero Section ────────────────────────── */}
@@ -480,7 +430,6 @@ export default function Home() {
         className="relative flex flex-col items-center text-center px-6"
         style={{ paddingTop: '140px' }}
       >
-        {/* Background glow */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-[0.03] pointer-events-none"
           style={{
@@ -488,7 +437,6 @@ export default function Home() {
           }}
         />
 
-        {/* Eyebrow */}
         <motion.p
           initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -499,16 +447,15 @@ export default function Home() {
             color: 'var(--text-muted)',
           }}
         >
-          COMPETITIVE PROGRAMMING · EVOLVED
+          CODE. COMPETE. COLLABORATE.
         </motion.p>
 
-        {/* Main Heading — letter by letter */}
         <h1
           className="font-extrabold leading-[0.9] mb-0"
           style={{
             fontFamily: 'var(--font-syne), Syne, sans-serif',
-            fontSize: 'clamp(56px, 10vw, 96px)',
-            letterSpacing: '-4px',
+            fontSize: 'clamp(48px, 9vw, 84px)',
+            letterSpacing: '-2px',
           }}
         >
           {heroLetters.map((letter, i) => (
@@ -529,7 +476,6 @@ export default function Home() {
           ))}
         </h1>
 
-        {/* Subheading */}
         <motion.p
           initial={prefersReducedMotion ? undefined : { opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -541,12 +487,9 @@ export default function Home() {
             lineHeight: 1.7,
           }}
         >
-          Build faster. Debug smarter.
-          <br />
-          Win more contests.
+          Join the community. Solve algorithms. <br /> Master competitive programming.
         </motion.p>
 
-        {/* CTA Buttons */}
         <motion.div
           initial={prefersReducedMotion ? undefined : { opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -554,7 +497,7 @@ export default function Home() {
           className="flex flex-wrap gap-3 justify-center mt-12"
         >
           <Link
-            href="/ide"
+            href="/register"
             className="px-8 py-3 rounded font-bold text-sm tracking-wider transition-all duration-200"
             style={{
               fontFamily: "'Space Mono', monospace",
@@ -570,10 +513,10 @@ export default function Home() {
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            LAUNCH EDITOR →
+            JOIN NOW →
           </Link>
           <Link
-            href="/register"
+            href="/contests"
             className="px-8 py-3 rounded text-sm tracking-wider transition-all duration-200"
             style={{
               fontFamily: "'Space Mono', monospace",
@@ -589,11 +532,10 @@ export default function Home() {
               e.currentTarget.style.color = 'var(--text-primary)';
             }}
           >
-            JOIN CLUB →
+            EXPLORE →
           </Link>
         </motion.div>
 
-        {/* Animated Code Block */}
         <motion.div
           initial={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -602,32 +544,6 @@ export default function Home() {
         >
           <TypingCodeBlock />
         </motion.div>
-      </section>
-
-      {/* ── Daily Problems Widget ────────────────────── */}
-      <section className="max-w-4xl mx-auto px-6" style={{ marginTop: '120px' }}>
-        <motion.h2
-          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.4 }}
-          className="text-2xl font-bold text-center mb-8 tracking-wider"
-          style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
-        >
-          PROBLEM OF THE DAY
-        </motion.h2>
-
-        {loadingDaily ? (
-          <div className="flex justify-center">
-            <div className="animate-pulse h-32 bg-bg-surface border border-border-subtle rounded-lg w-full max-w-2xl" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            {dailyProblems.map((problem, i) => (
-              <DailyProblemCard key={problem.platform} problem={problem} index={i} />
-            ))}
-          </div>
-        )}
       </section>
 
       {/* ── Features Grid ───────────────────────── */}
@@ -640,7 +556,7 @@ export default function Home() {
           className="text-2xl font-bold text-center mb-12 tracking-wider"
           style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
         >
-          EVERYTHING YOU NEED
+          OUR FEATURES
         </motion.h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -720,24 +636,23 @@ export default function Home() {
       >
         <div className="max-w-5xl mx-auto px-6 py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            {/* Logo */}
             <div className="flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
               <span
                 className="text-sm font-extrabold tracking-widest"
                 style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
               >
-                FORGE<span style={{ opacity: 0.4 }}>IDE</span>
+                CODERS<span style={{ opacity: 0.4 }}>LEAGUE</span>
               </span>
             </div>
 
-            {/* Nav — links point to valid routes */}
             <nav className="flex items-center gap-6">
               {[
-                { label: 'IDE', href: '/ide' },
-                { label: 'Problems', href: '/club/problems' },
                 { label: 'Contests', href: '/contests' },
-                { label: 'Club', href: '/club' },
+                { label: 'IDE', href: '/ide' },
+                { label: 'Whiteboard', href: '/whiteboard' },
+                { label: 'Leaderboard', href: '/leaderboard' },
+                { label: 'Forum', href: '/forum' },
               ].map((item) => (
                 <Link
                   key={item.href}
@@ -759,7 +674,6 @@ export default function Home() {
               ))}
             </nav>
 
-            {/* Right */}
             <p
               className="text-xs"
               style={{
@@ -767,11 +681,10 @@ export default function Home() {
                 color: 'var(--text-muted)',
               }}
             >
-              Built for PICT Coders League
+              Built for Competitive Coders
             </p>
           </div>
 
-          {/* Bottom bar — dynamic copyright year */}
           <div
             className="text-center mt-8 pt-6"
             style={{ borderTop: '1px solid var(--border-subtle)' }}
@@ -783,7 +696,7 @@ export default function Home() {
                 color: 'var(--text-muted)',
               }}
             >
-              © {new Date().getFullYear()} Forge IDE · MIT License
+              © {new Date().getFullYear()} Coders League · MIT License
             </p>
           </div>
         </div>

@@ -80,12 +80,11 @@ export function Topbar() {
   };
 
   const navItems = [
-    { label: 'IDE', href: '/ide' },
-    { label: 'PROBLEMS', href: '/club/problems' },
     { label: 'CONTESTS', href: '/contests' },
+    { label: 'IDE', href: '/ide' },
+    { label: 'WHITEBOARD', href: '/whiteboard' },
     { label: 'LEADERBOARD', href: '/leaderboard' },
-    { label: 'COMMUNITY', href: '/community' },
-    { label: 'CLUB', href: '/club' },
+    { label: 'FORUM', href: '/forum' },
   ];
 
   return (
@@ -106,7 +105,11 @@ export function Topbar() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Link href="/" className="flex items-center gap-2.5 group" aria-label="Forge IDE Home">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 group"
+            aria-label="Coders League Home"
+          >
             <div className="relative">
               <div
                 className="w-2.5 h-2.5 rounded-full"
@@ -123,8 +126,8 @@ export function Topbar() {
               className="text-sm font-extrabold tracking-widest"
               style={{ fontFamily: 'var(--font-syne), Syne, sans-serif' }}
             >
-              FORGE
-              <span style={{ opacity: 0.4 }}>IDE</span>
+              CODERS
+              <span style={{ opacity: 0.4 }}>LEAGUE</span>
             </span>
           </Link>
         </motion.div>
@@ -319,10 +322,7 @@ export function Topbar() {
                   >
                     {user.username}
                   </div>
-                  {[
-                    { label: 'Profile', href: '/profile' },
-                    { label: 'Club', href: '/club' },
-                  ].map((item) => (
+                  {[{ label: 'Profile', href: '/profile' }].map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}

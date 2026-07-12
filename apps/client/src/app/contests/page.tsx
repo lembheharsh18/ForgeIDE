@@ -19,11 +19,11 @@ interface Contest {
   link: string;
   description: string | null;
   participantCount: number;
+  createdById: string | null;
 }
 
 export default function ContestsPage() {
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'ADMIN';
 
   const [upcoming, setUpcoming] = useState<Contest[]>([]);
   const [past, setPast] = useState<Contest[]>([]);
@@ -110,7 +110,7 @@ export default function ContestsPage() {
             >
               Contest leaderboard
             </Link>
-            {isAdmin && (
+            {user?.id === contest.createdById && (
               <button className="px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text-primary">
                 Edit
               </button>
@@ -149,14 +149,12 @@ export default function ContestsPage() {
                 Club-hosted contests only. External platform reminders stay on the club home page.
               </p>
             </div>
-            {isAdmin && (
-              <Link
-                href="/admin/contests/add"
-                className="rounded border border-[#39ff8a] px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider text-[#39ff8a] transition-colors hover:bg-[rgba(57,255,138,0.1)]"
-              >
-                + Add contest
-              </Link>
-            )}
+            <Link
+              href="/contests/create"
+              className="rounded border border-[#39ff8a] px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider text-[#39ff8a] transition-colors hover:bg-[rgba(57,255,138,0.1)]"
+            >
+              + Add contest
+            </Link>
           </div>
 
           {isLoading ? (

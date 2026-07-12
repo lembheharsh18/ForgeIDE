@@ -7,7 +7,6 @@ import { JWT_EXPIRY, REFRESH_EXPIRY } from '../config/constants';
 export interface TokenPayload {
   userId: string;
   email: string;
-  role: string;
 }
 
 // ── Secrets ──────────────────────────────────────

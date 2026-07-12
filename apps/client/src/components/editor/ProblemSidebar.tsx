@@ -252,31 +252,6 @@ export function ProblemSidebar() {
           })
         )}
       </div>
-
-      {/* Add Problem (admin only) */}
-      {user?.role === 'ADMIN' && (
-        <div className="p-2 shrink-0" style={{ borderTop: '1px solid var(--border-subtle)' }}>
-          <button
-            onClick={() => router.push('/admin/problems/add')}
-            className="w-full py-1.5 rounded text-[10px] font-bold tracking-wider transition-all duration-200"
-            style={{
-              fontFamily: "'Space Mono', monospace",
-              border: '1px dashed var(--border-default)',
-              color: 'var(--text-muted)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--accent)';
-              e.currentTarget.style.color = 'var(--accent)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-default)';
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }}
-          >
-            + ADD PROBLEM
-          </button>
-        </div>
-      )}
     </div>
   );
 }

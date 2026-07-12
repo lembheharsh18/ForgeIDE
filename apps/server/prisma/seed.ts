@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { PrismaClient, Role, Platform } from '@prisma/client';
+import { PrismaClient, Platform } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -43,7 +43,6 @@ async function main() {
       username: 'admin',
       email: 'admin@forge.dev',
       passwordHash: adminPassword,
-      role: Role.ADMIN,
       codeforcesHandle: 'forge_admin',
       avatarUrl: null,
     },
@@ -72,7 +71,6 @@ async function main() {
         username: m.username,
         email: m.email,
         passwordHash: memberPassword,
-        role: Role.MEMBER,
         codeforcesHandle: m.cfHandle,
       },
     });
