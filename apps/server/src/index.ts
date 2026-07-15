@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config({ path: '../../.env' });
 import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
 import helmet from 'helmet';
@@ -24,8 +25,6 @@ import reverseCodeRoutes from './routes/reverseCode';
 import submissionRoutes from './routes/submissions';
 import userRoutes from './routes/users';
 import { initSocketServer } from './sockets';
-
-dotenv.config({ path: '../../.env' });
 
 const app = express();
 const httpServer = createServer(app);

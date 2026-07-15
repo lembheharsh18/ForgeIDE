@@ -14,7 +14,6 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { hashPassword, comparePassword } from '../utils/password';
 
 const router = Router();
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ── Zod Schemas ──────────────────────────────────
 
@@ -435,6 +434,7 @@ router.post('/google', async (req: Request, res: Response) => {
       return;
     }
 
+    const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
