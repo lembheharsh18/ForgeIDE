@@ -16,7 +16,7 @@ const createContestSchema = z.object({
   platform: z.enum(['CODEFORCES', 'ATCODER', 'LEETCODE', 'CUSTOM']),
   startTime: z.string().transform((s) => new Date(s)),
   endTime: z.string().transform((s) => new Date(s)),
-  link: z.string().url(),
+  link: z.string().url().optional().or(z.literal('')),
   description: z.string().max(1000).optional(),
   problemIds: z.array(z.string()).optional(),
 });
@@ -108,6 +108,13 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
             platform: true,
             tags: true,
             referenceLang: true,
+            statement: true,
+            inputSpec: true,
+            outputSpec: true,
+            noteSection: true,
+            timeLimit: true,
+            memoryLimit: true,
+            testCases: true,
           },
         },
         _count: { select: { participants: true } },
@@ -127,6 +134,105 @@ router.get('/:id', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/contests/:id/leaderboard ────────────
+
+router.get('/:id/leaderboard', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const contest = await prisma.contest.findUnique({
+      where: { id: req.params.id },
+      include: {
+        problems: { select: { id: true, title: true } },
+      },
+    });
+
+    if (!contest) {
+      res.status(404).json({ error: 'Contest not found' });
+      return;
+    }
+
+    const problemIds = contest.problems.map((p) => p.id);
+
+    // Fetch all ACCEPTED submissions for this contest's problems
+    const submissions = await prisma.submission.findMany({
+      where: {
+        problemId: { in: problemIds },
+        verdict: 'ACCEPTED',
+        contestId: contest.id,
+      },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: { select: { id: true, username: true, avatarUrl: true } },
+      },
+    });
+
+    // Build per-user standings
+    const userMap = new Map<
+      string,
+      {
+        userId: string;
+        username: string;
+        avatarUrl: string | null;
+        solved: Set<string>;
+        totalPenalty: number;
+        problemTimes: Record<string, number>;
+      }
+    >();
+
+    for (const sub of submissions) {
+      if (!userMap.has(sub.userId)) {
+        userMap.set(sub.userId, {
+          userId: sub.userId,
+          username: sub.user.username,
+          avatarUrl: sub.user.avatarUrl,
+          solved: new Set(),
+          totalPenalty: 0,
+          problemTimes: {},
+        });
+      }
+
+      const entry = userMap.get(sub.userId)!;
+      if (!entry.solved.has(sub.problemId)) {
+        entry.solved.add(sub.problemId);
+        const timeSinceStart = Math.floor(
+          (sub.createdAt.getTime() - contest.startTime.getTime()) / 60000,
+        );
+        entry.totalPenalty += Math.max(0, timeSinceStart);
+        entry.problemTimes[sub.problemId] = timeSinceStart;
+      }
+    }
+
+    // Sort: most solved first, then lowest penalty
+    const standings = Array.from(userMap.values())
+      .map((entry) => ({
+        userId: entry.userId,
+        username: entry.username,
+        avatarUrl: entry.avatarUrl,
+        solvedCount: entry.solved.size,
+        totalPenalty: entry.totalPenalty,
+        problemStatuses: problemIds.map((pid) => ({
+          problemId: pid,
+          solved: entry.solved.has(pid),
+          timeMinutes: entry.problemTimes[pid] ?? null,
+        })),
+      }))
+      .sort((a, b) => {
+        if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount;
+        return a.totalPenalty - b.totalPenalty;
+      })
+      .map((entry, i) => ({ ...entry, rank: i + 1 }));
+
+    res.json({
+      contestId: contest.id,
+      contestName: contest.name,
+      problems: contest.problems,
+      standings,
+    });
+  } catch (err) {
+    console.error('[Contests] Leaderboard error:', err);
+    res.status(500).json({ error: 'Failed to fetch contest leaderboard' });
+  }
+});
+
 // ── POST /api/contests ───────────────────────────
 // Any authenticated user can create a contest
 
@@ -141,7 +247,7 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
         platform: body.platform,
         startTime: body.startTime,
         endTime: body.endTime,
-        link: body.link,
+        link: body.link || null,
         description: body.description || null,
         createdById: req.user!.userId,
         ...(body.problemIds && body.problemIds.length > 0
@@ -188,7 +294,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response) => {
         ...(body.platform !== undefined && { platform: body.platform }),
         ...(body.startTime !== undefined && { startTime: body.startTime }),
         ...(body.endTime !== undefined && { endTime: body.endTime }),
-        ...(body.link !== undefined && { link: body.link }),
+        ...(body.link !== undefined && { link: body.link || null }),
         ...(body.description !== undefined && { description: body.description }),
       },
     });

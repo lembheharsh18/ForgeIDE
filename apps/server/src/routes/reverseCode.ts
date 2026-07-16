@@ -24,9 +24,41 @@ const COMPILE_TIMEOUT_MS = 10000;
 
 // ── POST /api/reverse-code/try-input ─────────────
 
-router.post('/try-input', requireAuth, requireLiveContest, executeLimiter, async (req: Request, res: Response) => {
+router.post('/try-input', requireAuth, executeLimiter, async (req: Request, res: Response) => {
   try {
     const body = tryInputSchema.parse(req.body);
+
+    // ── Live Contest Check ────────────────────────
+    const now = new Date();
+    const liveContest = await prisma.contest.findFirst({
+      where: {
+        startTime: { lte: now },
+        endTime: { gt: now },
+      },
+    });
+
+    let allowed = false;
+    if (liveContest) allowed = true;
+
+    if (!allowed && body.problemId) {
+      const contest = await prisma.contest.findFirst({
+        where: {
+          problems: { some: { id: body.problemId } },
+          startTime: { lte: now },
+          endTime: { gt: now },
+        },
+      });
+      if (contest) allowed = true;
+    }
+
+    if (!allowed) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Code execution is only allowed during a live contest.',
+      });
+      return;
+    }
+    // ───────────────────────────────────────────────
 
     const problem = await prisma.problem.findUnique({
       where: { id: body.problemId },
@@ -38,7 +70,11 @@ router.post('/try-input', requireAuth, requireLiveContest, executeLimiter, async
     }
 
     if (!problem.referenceSolution || !problem.referenceLang) {
-      res.status(400).json({ error: 'This problem is not a reverse-coding problem or is missing a reference solution' });
+      res
+        .status(400)
+        .json({
+          error: 'This problem is not a reverse-coding problem or is missing a reference solution',
+        });
       return;
     }
 
@@ -51,7 +87,12 @@ router.post('/try-input', requireAuth, requireLiveContest, executeLimiter, async
     });
 
     if (queryCount >= MAX_QUERIES) {
-      res.status(403).json({ error: 'Forbidden', message: `Query limit reached (${MAX_QUERIES} queries max per problem)` });
+      res
+        .status(403)
+        .json({
+          error: 'Forbidden',
+          message: `Query limit reached (${MAX_QUERIES} queries max per problem)`,
+        });
       return;
     }
 

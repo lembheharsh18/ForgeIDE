@@ -36,9 +36,52 @@ const COMPILE_TIMEOUT_MS = 10000;
 
 // ── POST /api/execute ────────────────────────────
 
-router.post('/', requireAuth, requireLiveContest, executeLimiter, async (req: Request, res: Response) => {
+router.post('/', requireAuth, executeLimiter, async (req: Request, res: Response) => {
   try {
     const body = executeSchema.parse(req.body);
+
+    // ── Live Contest Check ────────────────────────
+    const now = new Date();
+    const liveContest = await prisma.contest.findFirst({
+      where: {
+        startTime: { lte: now },
+        endTime: { gt: now },
+      },
+    });
+
+    let allowed = false;
+
+    // Is there a global live contest?
+    if (liveContest) {
+      allowed = true;
+    }
+
+    // Is this tied to a specific contest that is currently live?
+    let targetContestId: string | undefined;
+    if (!allowed && body.problemId) {
+      const contest = await prisma.contest.findFirst({
+        where: {
+          problems: { some: { id: body.problemId } },
+          startTime: { lte: now },
+          endTime: { gt: now },
+        },
+      });
+
+      if (contest) {
+        allowed = true;
+        targetContestId = contest.id;
+      }
+    }
+
+    if (!allowed) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Code execution is only allowed during a live contest.',
+      });
+      return;
+    }
+    // ───────────────────────────────────────────────
+
     const lang = LANGUAGES[body.language];
 
     const result = await executeCode({
@@ -71,6 +114,7 @@ router.post('/', requireAuth, requireLiveContest, executeLimiter, async (req: Re
           data: {
             userId: req.user.userId,
             problemId: body.problemId,
+            contestId: targetContestId || liveContest?.id,
             language: body.language,
             code: body.code,
             verdict: dbVerdict,
@@ -124,9 +168,43 @@ router.post('/', requireAuth, requireLiveContest, executeLimiter, async (req: Re
 
 const testResultLimiter = executeLimiter; // Same 10/min limiter
 
-router.post('/run-tests', requireAuth, requireLiveContest, testResultLimiter, async (req: Request, res: Response) => {
+router.post('/run-tests', requireAuth, testResultLimiter, async (req: Request, res: Response) => {
   try {
     const body = runTestsSchema.parse(req.body);
+
+    // ── Live Contest Check ────────────────────────
+    const now = new Date();
+    const liveContest = await prisma.contest.findFirst({
+      where: {
+        startTime: { lte: now },
+        endTime: { gt: now },
+      },
+    });
+
+    let allowed = false;
+    if (liveContest) allowed = true;
+
+    if (!allowed && body.problemId) {
+      const contest = await prisma.contest.findFirst({
+        where: {
+          problems: { some: { id: body.problemId } },
+          startTime: { lte: now },
+          endTime: { gt: now },
+        },
+      });
+
+      if (contest) allowed = true;
+    }
+
+    if (!allowed) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Code execution is only allowed during a live contest.',
+      });
+      return;
+    }
+    // ───────────────────────────────────────────────
+
     const lang = LANGUAGES[body.language as Language];
 
     if (!lang) {

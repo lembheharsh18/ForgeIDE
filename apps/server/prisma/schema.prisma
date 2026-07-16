@@ -83,6 +83,7 @@ model Submission {
   id         String   @id @default(cuid())
   userId     String
   problemId  String
+  contestId  String?
   language   String
   code       String   @db.Text
   verdict    String   @default("PENDING")
@@ -92,24 +93,26 @@ model Submission {
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   problem    Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  contest    Contest? @relation(fields: [contestId], references: [id], onDelete: SetNull)
 }
 
 // ── Contest ──────────────────────────────────────
 
 model Contest {
-  id           String      @id @default(cuid())
+  id           String       @id @default(cuid())
   name         String
-  type         ContestType @default(NORMAL)
+  type         ContestType  @default(NORMAL)
   platform     Platform
   startTime    DateTime
   endTime      DateTime
-  link         String
+  link         String?
   description  String?
   createdById  String?
-  createdBy    User?       @relation("ContestCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  participants User[]      @relation("Participants")
-  problems     Problem[]   @relation("ContestProblems")
-  createdAt    DateTime    @default(now())
+  createdBy    User?        @relation("ContestCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  participants User[]       @relation("Participants")
+  problems     Problem[]    @relation("ContestProblems")
+  submissions  Submission[]
+  createdAt    DateTime     @default(now())
 }
 
 // ── Leaderboard ──────────────────────────────────

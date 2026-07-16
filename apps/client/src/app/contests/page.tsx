@@ -63,6 +63,10 @@ export default function ContestsPage() {
 
   const ContestCard = ({ contest, isPast }: { contest: Contest; isPast: boolean }) => {
     const isReverseCoding = (contest as any).type === 'REVERSE_CODING';
+    const isCustom = contest.platform === 'CUSTOM';
+
+    // Any custom OR reverse coding contest is handled in-platform
+    const isInPlatform = isCustom || isReverseCoding;
 
     return (
       <motion.div
@@ -86,11 +90,18 @@ export default function ContestsPage() {
           {contest.description && (
             <p className="line-clamp-2 text-sm text-text-muted">{contest.description}</p>
           )}
-          <div className="mt-2 flex items-center gap-4 font-mono text-xs text-text-muted">
+          <div className="mt-2 flex flex-col md:flex-row md:items-center gap-4 font-mono text-xs text-text-muted">
             <span>
               {formatDate(contest.startTime)} - {formatDate(contest.endTime)}
             </span>
+            <span className="hidden md:inline">•</span>
             <span>{contest.participantCount} participants</span>
+            {contest.createdById && (contest as any).createdBy?.username && (
+              <>
+                <span className="hidden md:inline">•</span>
+                <span>By @{(contest as any).createdBy.username}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -108,23 +119,19 @@ export default function ContestsPage() {
               href={`/contests/${contest.id}/leaderboard`}
               className="rounded border border-border-default px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-text-primary transition-colors hover:border-accent hover:text-accent"
             >
-              Contest leaderboard
+              Leaderboard
             </Link>
-            {user?.id === contest.createdById && (
-              <button className="px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-text-muted hover:text-text-primary">
-                Edit
-              </button>
-            )}
-            {isReverseCoding ? (
+
+            {isInPlatform ? (
               <Link
-                href={`/ide?contestId=${contest.id}`}
+                href={`/contests/${contest.id}`}
                 className="rounded bg-accent px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-bg-primary transition-colors hover:bg-[#fbbf24]"
               >
                 {isPast ? 'View' : 'Enter Arena'}
               </Link>
             ) : (
               <a
-                href={contest.link}
+                href={contest.link || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded bg-accent px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-bg-primary transition-colors hover:bg-[#fbbf24]"
