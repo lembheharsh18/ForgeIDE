@@ -68,7 +68,25 @@ function LandingNav() {
 
         {/* Nav + Auth */}
         <div className="flex items-center gap-4">
-          {!isAuthenticated && (
+          {isAuthenticated ? (
+            <Link
+              href="/club"
+              className="px-4 py-1.5 rounded text-xs font-bold transition-all duration-200"
+              style={{
+                fontFamily: "'Space Mono', monospace",
+                backgroundColor: 'var(--accent)',
+                color: '#0a0a0a',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 15px rgba(232, 255, 90, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              DASHBOARD →
+            </Link>
+          ) : (
             <div className="flex items-center gap-2">
               <Link
                 href="/login"

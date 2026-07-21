@@ -5,7 +5,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -43,10 +43,17 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const router = useRouter();
-  const { setAuth } = useAuthStore();
+  const { setAuth, isAuthenticated, isLoading } = useAuthStore();
   const [step, setStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Redirect already-authenticated users to /club
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/club');
+    }
+  }, [isAuthenticated, isLoading, router]);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {

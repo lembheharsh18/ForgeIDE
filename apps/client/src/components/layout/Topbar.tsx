@@ -80,6 +80,7 @@ export function Topbar() {
   };
 
   const navItems = [
+    { label: 'HOME', href: '/club' },
     { label: 'CONTESTS', href: '/contests' },
     { label: 'IDE', href: '/ide' },
     { label: 'WHITEBOARD', href: '/whiteboard' },

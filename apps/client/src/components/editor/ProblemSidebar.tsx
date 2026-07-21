@@ -72,7 +72,7 @@ export function ProblemSidebar() {
     const fetchSolvedIds = async () => {
       if (!user) return;
       try {
-        const res = await api.get('/api/submissions?verdict=ACCEPTED');
+        const res = await api.get('/api/submissions/me?verdict=ACCEPTED');
         const ids = new Set<string>();
         // Check if data is array or object with submissions array
         const data = res.data;
