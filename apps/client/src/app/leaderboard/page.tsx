@@ -21,6 +21,9 @@ interface LeaderboardEntry {
   score: number;
   solvedCount: number;
   updatedAt: string;
+  cfRating?: number | null;
+  lcRating?: number | null;
+  ccRating?: number | null;
 }
 
 interface LeaderboardResponse {
@@ -76,7 +79,12 @@ export default function LeaderboardPage() {
     fetchLeaderboard();
   }, [sort, platform]);
 
-  const maxScore = leaderboard.length > 0 ? Math.max(...leaderboard.map((e) => e.score), 1) : 1;
+  const maxScore =
+    platform === 'ALL'
+      ? leaderboard.length > 0
+        ? Math.max(...leaderboard.map((e) => e.score), 1)
+        : 1
+      : 4000; // max expected rating roughly 4000 for CF/LC/CC
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'text-[#e8ff5a]';
@@ -209,12 +217,30 @@ export default function LeaderboardPage() {
 
                     <div className="flex flex-col items-end justify-center pr-4">
                       <span className="font-mono text-lg font-bold text-[#39ff8a]">
-                        {entry.score}
+                        {platform === 'CODEFORCES'
+                          ? (entry.cfRating ?? 'Unrated')
+                          : platform === 'LEETCODE'
+                            ? (entry.lcRating ?? 'Unrated')
+                            : platform === 'CODECHEF'
+                              ? (entry.ccRating ?? 'Unrated')
+                              : entry.score}
                       </span>
                       <div className="mt-1 h-0.5 w-full overflow-hidden rounded bg-bg-elevated">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: `${(entry.score / maxScore) * 100}%` }}
+                          animate={{
+                            width: `${
+                              ((platform === 'CODEFORCES'
+                                ? entry.cfRating || 0
+                                : platform === 'LEETCODE'
+                                  ? entry.lcRating || 0
+                                  : platform === 'CODECHEF'
+                                    ? entry.ccRating || 0
+                                    : entry.score) /
+                                maxScore) *
+                              100
+                            }%`,
+                          }}
                           transition={{
                             duration: 0.5,
                             ease: 'easeOut',

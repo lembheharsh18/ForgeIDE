@@ -12,6 +12,9 @@ export interface LeaderboardListEntry {
   score: number;
   solvedCount: number;
   updatedAt: Date;
+  cfRating?: number | null;
+  lcRating?: number | null;
+  ccRating?: number | null;
 }
 
 export type LeaderboardSortKey = 'rank' | 'rating' | 'solved';
@@ -27,46 +30,78 @@ export async function getLeaderboardEntries(
   options: LeaderboardQueryOptions = {},
 ): Promise<LeaderboardListEntry[]> {
   const { limit, sort = 'rating', platform = 'ALL' } = options;
-  const orderBy =
-    sort === 'solved'
-      ? [{ solvedCount: 'desc' as const }, { score: 'desc' as const }]
-      : sort === 'rank'
-        ? [{ rank: 'asc' as const }, { score: 'desc' as const }]
-        : [{ score: 'desc' as const }, { solvedCount: 'desc' as const }];
 
-  const entries = await prisma.leaderboardEntry.findMany({
-    orderBy,
-    where:
-      platform === 'CODEFORCES'
-        ? {
-            user: {
-              codeforcesHandle: { not: null },
-            },
-          }
-        : undefined,
+  if (platform === 'ALL') {
+    const orderBy =
+      sort === 'solved'
+        ? [{ solvedCount: 'desc' as const }, { score: 'desc' as const }]
+        : sort === 'rank'
+          ? [{ rank: 'asc' as const }, { score: 'desc' as const }]
+          : [{ score: 'desc' as const }, { solvedCount: 'desc' as const }];
+
+    const entries = await prisma.leaderboardEntry.findMany({
+      orderBy,
+      ...(limit ? { take: limit } : {}),
+      include: {
+        user: {
+          select: {
+            username: true,
+            avatarUrl: true,
+            codeforcesHandle: true,
+            platformProfile: true,
+          },
+        },
+      },
+    });
+
+    return entries.map((entry, index) => ({
+      rank: index + 1,
+      userId: entry.userId,
+      username: entry.user.username,
+      avatarUrl: entry.user.avatarUrl,
+      codeforcesHandle: entry.user.codeforcesHandle,
+      score: entry.score,
+      solvedCount: entry.solvedCount,
+      updatedAt: entry.updatedAt,
+      cfRating: entry.user.platformProfile?.cfRating,
+      lcRating: entry.user.platformProfile?.lcRating,
+      ccRating: entry.user.platformProfile?.ccRating,
+    }));
+  }
+
+  // Specific platform filters
+  let orderByCache: any = {};
+  if (platform === 'CODEFORCES') orderByCache = { cfRating: 'desc' };
+  if (platform === 'LEETCODE') orderByCache = { lcRating: 'desc' };
+  if (platform === 'CODECHEF') orderByCache = { ccRating: 'desc' };
+
+  const entries = await prisma.platformProfileCache.findMany({
+    orderBy: orderByCache,
+    where: {
+      ...(platform === 'CODEFORCES' ? { cfRating: { not: null } } : {}),
+      ...(platform === 'LEETCODE' ? { lcRating: { not: null } } : {}),
+      ...(platform === 'CODECHEF' ? { ccRating: { not: null } } : {}),
+    },
     ...(limit ? { take: limit } : {}),
     include: {
       user: {
-        select: {
-          username: true,
-          avatarUrl: true,
-          codeforcesHandle: true,
-        },
+        include: { leaderboard: true },
       },
     },
   });
 
-  const filteredEntries = platform === 'ALL' || platform === 'CODEFORCES' ? entries : [];
-
-  return filteredEntries.map((entry: (typeof filteredEntries)[number], index: number) => ({
+  return entries.map((entry, index) => ({
     rank: index + 1,
     userId: entry.userId,
     username: entry.user.username,
     avatarUrl: entry.user.avatarUrl,
     codeforcesHandle: entry.user.codeforcesHandle,
-    score: entry.score,
-    solvedCount: entry.solvedCount,
+    score: entry.user.leaderboard?.score || 0,
+    solvedCount: entry.user.leaderboard?.solvedCount || 0,
     updatedAt: entry.updatedAt,
+    cfRating: entry.cfRating,
+    lcRating: entry.lcRating,
+    ccRating: entry.ccRating,
   }));
 }
 

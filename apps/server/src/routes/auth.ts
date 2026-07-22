@@ -8,7 +8,7 @@ import { COOKIE_OPTIONS } from '../config/constants';
 import { prisma } from '../config/db';
 import { authLimiter } from '../middleware/rateLimiter';
 import { requireAuth } from '../middleware/requireAuth';
-import { fetchCFRating, fetchLCRating, fetchCCRating } from '../services/cpStats';
+import { fetchCFRating, fetchLCRating, fetchCCRating, fetchAllStats } from '../services/cpStats';
 import type { TokenPayload } from '../utils/jwt';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { hashPassword, comparePassword } from '../utils/password';
@@ -414,6 +414,37 @@ router.put('/profile', requireAuth, async (req: Request, res: Response) => {
         avatarUrl: true,
       },
     });
+
+    // Fetch new stats in the background to update leaderboard
+    setTimeout(async () => {
+      try {
+        const stats = await fetchAllStats(
+          user.codeforcesHandle,
+          user.leetcodeUsername,
+          user.codechefHandle,
+        );
+        await prisma.platformProfileCache.upsert({
+          where: { userId: user.id },
+          update: {
+            cfRating: stats.cfRating,
+            cfRank: stats.cfRank,
+            lcRating: stats.lcRating,
+            ccRating: stats.ccRating,
+            ccStars: stats.ccStars,
+          },
+          create: {
+            userId: user.id,
+            cfRating: stats.cfRating,
+            cfRank: stats.cfRank,
+            lcRating: stats.lcRating,
+            ccRating: stats.ccRating,
+            ccStars: stats.ccStars,
+          },
+        });
+      } catch (e) {
+        console.error('[Auth] Background stats fetch failed', e);
+      }
+    }, 0);
 
     res.json({ user });
   } catch (error) {

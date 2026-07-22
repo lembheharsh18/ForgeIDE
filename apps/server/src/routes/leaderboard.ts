@@ -43,11 +43,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     const leaderboard = await getLeaderboardEntries({ sort, platform, limit });
     const responsePayload = {
-      source: 'LOCAL_LEADERBOARD_FALLBACK',
-      message:
-        platform === 'ALL' || platform === 'CODEFORCES'
-          ? 'Using the existing Forge leaderboard until PlatformProfileSnapshot aggregation is built.'
-          : `No ${platform} snapshots are available yet; PlatformProfileSnapshot integration is not built.`,
+      source: 'LIVE_LEADERBOARD',
+      message: platform === 'ALL' ? 'Aggregated Forge Score' : `${platform} Rankings`,
       sort,
       platform,
       entries: leaderboard,

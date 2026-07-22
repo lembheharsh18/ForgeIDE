@@ -15,7 +15,8 @@ import { StatusBar } from '../../../components/layout/StatusBar';
 import { Topbar } from '../../../components/layout/Topbar';
 import { Badge } from '../../../components/ui/Badge';
 import { Countdown } from '../../../components/ui/Countdown';
-import { LANGUAGES } from '../../../config/languages';
+import type { Language } from '../../../config/languages';
+import { LANGUAGES, LANGUAGE_KEYS } from '../../../config/languages';
 import { useCodeExecution } from '../../../hooks/useCodeExecution';
 import api from '../../../lib/axios';
 import { useAuthStore } from '../../../store/authStore';
@@ -67,8 +68,17 @@ function ContestArenaContent() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const { language, theme, code, stdin, setCode, currentProblem, rcMode, setCurrentProblem } =
-    useEditorStore();
+  const {
+    language,
+    setLanguage,
+    theme,
+    code,
+    stdin,
+    setCode,
+    currentProblem,
+    rcMode,
+    setCurrentProblem,
+  } = useEditorStore();
   const { execute } = useCodeExecution();
 
   const [contest, setContest] = useState<any>(null);
@@ -199,6 +209,41 @@ function ContestArenaContent() {
               REVERSE CODING
             </span>
           )}
+        </div>
+
+        {/* Language Selector */}
+        <div className="relative">
+          <select
+            aria-label="Select editor language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as Language)}
+            className="appearance-none rounded text-xs transition-all duration-200"
+            style={{
+              height: '32px',
+              minWidth: '132px',
+              padding: '0 30px 0 12px',
+              fontFamily: "'Space Mono', monospace",
+              border: '1px solid var(--accent)',
+              backgroundColor: 'var(--accent)',
+              color: '#0a0a0a',
+              fontWeight: 700,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {LANGUAGE_KEYS.map((lang) => (
+              <option key={lang} value={lang}>
+                {LANGUAGES[lang].display}
+              </option>
+            ))}
+          </select>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px]"
+            style={{ color: '#0a0a0a' }}
+          >
+            ▼
+          </span>
         </div>
 
         <div className="flex items-center gap-6">
