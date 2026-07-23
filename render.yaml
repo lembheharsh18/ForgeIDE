@@ -22,6 +22,14 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://coders-league-zeta.vercel.app"
+      - key: PISTON_URL
+        value: "https://emkc.org/api/v2/piston"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
 
   - type: redis
     name: forge-redis
