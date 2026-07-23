@@ -6,15 +6,20 @@ import { Server as SocketServer } from 'socket.io';
 
 import { verifyAccessToken } from '../utils/jwt';
 
-import { registerRCHandlers } from './rcInteractor';
 import { initChatNamespace } from './chat';
+import { registerRCHandlers } from './rcInteractor';
 
 // ── Initialize Socket.IO ─────────────────────────
 
 export function initSocketServer(httpServer: HttpServer): SocketServer {
+  const allowedOrigin = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(
+    /\/$/,
+    '',
+  );
+
   const io = new SocketServer(httpServer, {
     cors: {
-      origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      origin: allowedOrigin,
       methods: ['GET', 'POST'],
       credentials: true,
     },

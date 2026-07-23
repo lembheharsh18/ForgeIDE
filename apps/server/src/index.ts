@@ -32,11 +32,20 @@ const httpServer = createServer(app);
 // ── Socket.IO ────────────────────────────────────
 const io = initSocketServer(httpServer);
 
+const allowedOrigin = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(
+  /\/$/,
+  '',
+);
+
 // ── Middleware ────────────────────────────────────
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  }),
+);
 app.use(
   cors({
-    origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    origin: allowedOrigin,
     credentials: true,
   }),
 );
