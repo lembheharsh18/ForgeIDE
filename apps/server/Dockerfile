@@ -37,4 +37,4 @@ COPY --from=builder /app/apps/server/prisma ./prisma
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "echo '--- Running Prisma Migrations ---' && npx prisma migrate deploy --schema=./prisma/schema.prisma && echo '--- Migrations Complete ---' && echo '--- Starting Server ---' && node dist/index.js"]
+CMD ["sh", "-c", "echo '--- Running Prisma DB Push ---' && npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss && echo '--- DB Push Complete ---' && echo '--- Starting Server ---' && node dist/index.js"]
