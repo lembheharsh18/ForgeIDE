@@ -548,13 +548,31 @@ router.post('/google', async (req: Request, res: Response) => {
       },
       accessToken,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Auth] Google OAuth error:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to authenticate with Google',
+      message: error?.message || 'Failed to authenticate with Google',
+      hint: !process.env.GOOGLE_CLIENT_ID ? 'GOOGLE_CLIENT_ID env var is not set' : undefined,
     });
   }
+});
+
+// ── GET /api/auth/debug-env (diagnostic) ─────────
+
+router.get('/debug-env', (_req: Request, res: Response) => {
+  res.json({
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID
+      ? `SET (${process.env.GOOGLE_CLIENT_ID.substring(0, 10)}...)`
+      : 'NOT SET',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET',
+    DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+    REDIS_URL: process.env.REDIS_URL ? 'SET' : 'NOT SET',
+    JWT_SECRET: process.env.JWT_SECRET ? 'SET' : 'NOT SET',
+    JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET ? 'SET' : 'NOT SET',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'NOT SET',
+    NODE_ENV: process.env.NODE_ENV || 'NOT SET',
+  });
 });
 
 export default router;
