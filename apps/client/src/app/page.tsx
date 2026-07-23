@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+import { LoadingScreen } from '../components/ui/LoadingScreen';
 import { useAuthStore } from '../store/authStore';
 import { useEditorStore } from '../store/editorStore';
 
@@ -431,7 +432,7 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  if (isLoading) return null;
+  if (isLoading) return <LoadingScreen />;
   if (isAuthenticated) return null;
 
   const heroLetters = 'CODERS LEAGUE'.split('');

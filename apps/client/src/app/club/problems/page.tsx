@@ -2,13 +2,17 @@
 
 // ── Problems Page ────────────────────────────────
 
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
+import toast from 'react-hot-toast';
 
+import { AddProblemModal } from '../../../components/dashboard/AddProblemModal';
+import type { EditableProblem } from '../../../components/dashboard/AddProblemModal';
 import { ProtectedRoute } from '../../../components/layout/ProtectedRoute';
 import { Badge, type BadgeVariant } from '../../../components/ui/Badge';
 import { DataTable } from '../../../components/ui/DataTable';
+import { Modal } from '../../../components/ui/Modal';
 import { Pagination } from '../../../components/ui/Pagination';
 import api from '../../../lib/axios';
 
@@ -51,6 +55,14 @@ export default function ProblemsPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState('createdAt');
 
+  // Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editProblem, setEditProblem] = useState<EditableProblem | null>(null);
+
+  // Delete State
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fetchProblems = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -87,6 +99,47 @@ export default function ProblemsPage() {
     setStatus('ALL');
     setTags([]);
     setPage(1);
+  };
+
+  // ── Edit Handler ───────────────────────────────
+
+  const handleEdit = async (problemId: string) => {
+    try {
+      const res = await api.get(`/api/problems/${problemId}`);
+      setEditProblem(res.data);
+      setIsAddModalOpen(true);
+    } catch {
+      toast.error('Failed to load problem details');
+    }
+  };
+
+  // ── Delete Handler ─────────────────────────────
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/problems/${deleteTarget.id}`);
+      toast.success(`"${deleteTarget.title}" deleted`);
+      setDeleteTarget(null);
+      fetchProblems();
+    } catch {
+      toast.error('Failed to delete problem');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // ── Modal Success Handler ──────────────────────
+
+  const handleModalSuccess = () => {
+    setEditProblem(null);
+    fetchProblems();
+  };
+
+  const handleModalClose = () => {
+    setIsAddModalOpen(false);
+    setEditProblem(null);
   };
 
   const columns = [
@@ -160,7 +213,7 @@ export default function ProblemsPage() {
       key: 'actions',
       header: 'Actions',
       render: (p: Problem) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Link
             href={`/ide?problem=${p.id}`}
             className="text-[10px] font-mono font-bold tracking-wider text-bg-primary bg-accent px-3 py-1 rounded hover:bg-[#fbbf24] transition-colors"
@@ -177,6 +230,22 @@ export default function ProblemsPage() {
               ↗ CF
             </a>
           )}
+          <button
+            type="button"
+            onClick={() => handleEdit(p.id)}
+            className="text-[10px] font-mono tracking-wider text-text-muted hover:text-accent transition-colors p-1"
+            title="Edit problem"
+          >
+            ✏️
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleteTarget({ id: p.id, title: p.title })}
+            className="text-[10px] font-mono tracking-wider text-text-muted hover:text-[#ff4545] transition-colors p-1"
+            title="Delete problem"
+          >
+            🗑️
+          </button>
         </div>
       ),
     },
@@ -186,7 +255,21 @@ export default function ProblemsPage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-bg-primary p-8 font-sans flex flex-col">
         <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col gap-6">
-          <h1 className="text-3xl font-bold tracking-tight text-text-primary">PROBLEMS</h1>
+          {/* ── Header with Add Button ── */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight text-text-primary">PROBLEMS</h1>
+            <button
+              type="button"
+              onClick={() => {
+                setEditProblem(null);
+                setIsAddModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-mono font-bold tracking-wider bg-accent text-[#0a0a0a] hover:bg-[#fbbf24] transition-all duration-200 glow-accent"
+            >
+              <span className="text-sm">+</span>
+              ADD PROBLEM
+            </button>
+          </div>
 
           <div className="flex flex-col lg:flex-row gap-8 flex-1 overflow-hidden">
             {/* Left Sidebar: Filters */}
@@ -310,6 +393,57 @@ export default function ProblemsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Add / Edit Problem Modal ── */}
+      <AddProblemModal
+        isOpen={isAddModalOpen}
+        onClose={handleModalClose}
+        onSuccess={handleModalSuccess}
+        editProblem={editProblem}
+      />
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="⚠️ Confirm Delete"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-primary">
+            Are you sure you want to delete{' '}
+            <span className="font-bold text-accent">&quot;{deleteTarget?.title}&quot;</span>?
+          </p>
+          <p className="text-xs text-text-muted font-mono">
+            This action cannot be undone. All submissions linked to this problem will also be
+            removed.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider border border-border-default text-text-muted hover:bg-bg-surface hover:text-text-primary transition-colors"
+            >
+              CANCEL
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider bg-[#ff4545] text-white hover:bg-[#ff6b6b] transition-all duration-200 disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  DELETING...
+                </span>
+              ) : (
+                '🗑️ DELETE PROBLEM'
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </ProtectedRoute>
   );
 }
